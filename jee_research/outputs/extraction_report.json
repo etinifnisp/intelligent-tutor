@@ -1,0 +1,32 @@
+{
+  "status": "success",
+  "timestamp": "2026-05-26T20:20:18.635039",
+  "total_questions": 6567,
+  "skipped_papers": [],
+  "breakdown_by_year": {
+    "2025": 1087,
+    "2024": 1161,
+    "2023": 1266,
+    "2022": 899,
+    "2021": 1595,
+    "2020": 143,
+    "2019": 275,
+    "2018": 56,
+    "2017": 66,
+    "2016": 19
+  },
+  "breakdown_by_subject": {
+    "Physics": 3097,
+    "Chemistry": 2186,
+    "Mathematics": 1284
+  },
+  "breakdown_by_question_type": {
+    "MCQ-single": 6487,
+    "Integer": 80
+  },
+  "breakdown_by_difficulty": {
+    "Medium": 740,
+    "Easy": 5817,
+    "Hard": 10
+  }
+}

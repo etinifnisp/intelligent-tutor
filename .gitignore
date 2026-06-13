@@ -1,0 +1,4 @@
+# Logs 
+jee_research/logs/*.log 
+jee_research/logs/*.txt 
+jee_research/logs/mech_sample.txt 

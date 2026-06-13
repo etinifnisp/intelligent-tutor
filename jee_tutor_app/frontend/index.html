@@ -1,0 +1,2258 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎓%3C/text%3E%3C/svg%3E" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Intelligent JEE Tutor</title>
+    <!-- Google Fonts: Inter, Outfit and JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <!-- KaTeX CSS for LaTeX Math Formatting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css" integrity="sha384-lSnO7skEL4PyM7r92L9UqH4h11n4f1cE5C5N/G4T7cK9y84gK4/uG41f" crossorigin="anonymous" />
+    
+    <style>
+      /* Core CSS Reset & Premium Design Variables */
+      :root {
+        --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        --font-mono: 'JetBrains Mono', monospace;
+
+        /* Premium SaaS Color Palette */
+        --bg-app: #0b0f19;
+        --bg-navbar: rgba(13, 17, 23, 0.7);
+        --bg-panel: rgba(15, 22, 36, 0.4);
+        --bg-card: rgba(255, 255, 255, 0.03);
+        --bg-card-hover: rgba(255, 255, 255, 0.06);
+        --bg-drawer: #090d16;
+        
+        --border-glass: rgba(255, 255, 255, 0.08);
+        --border-glass-hover: rgba(255, 255, 255, 0.16);
+
+        --text-main: #f3f4f6;
+        --text-muted: #9ca3af;
+        --text-dim: #4b5563;
+
+        /* Accents */
+        --physics: #3b82f6;
+        --physics-rgb: 59, 130, 246;
+        --chemistry: #10b981;
+        --chemistry-rgb: 16, 185, 129;
+        --mathematics: #8b5cf6;
+        --mathematics-rgb: 139, 92, 246;
+
+        /* Default Active Accent (linked to subject variables dynamically) */
+        --accent: #3b82f6;
+        --accent-rgb: 59, 130, 246;
+        --accent-glow: rgba(59, 130, 246, 0.15);
+
+        --transition-spring: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+        --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+
+        /* Difficulty Badges */
+        --badge-easy: #10b981;
+        --badge-medium: #eab308;
+        --badge-hard: #ef4444;
+      }
+
+      /* Subject Accent Class Mappings */
+      [data-subject="physics"] {
+        --accent: var(--physics);
+        --accent-rgb: var(--physics-rgb);
+        --accent-glow: rgba(var(--physics-rgb), 0.15);
+      }
+      [data-subject="chemistry"] {
+        --accent: var(--chemistry);
+        --accent-rgb: var(--chemistry-rgb);
+        --accent-glow: rgba(var(--chemistry-rgb), 0.15);
+      }
+      [data-subject="mathematics"] {
+        --accent: var(--mathematics);
+        --accent-rgb: var(--mathematics-rgb);
+        --accent-glow: rgba(var(--mathematics-rgb), 0.15);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: var(--font-sans);
+        background-color: var(--bg-app);
+        color: var(--text-main);
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* Custom Scrollbars */
+      ::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 99px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      /* Base Layout Wrapper */
+      .app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* BACKGROUND GRADIENT MESH BLOBS */
+      .app-container::before {
+        content: '';
+        position: absolute;
+        top: -10%;
+        left: -10%;
+        width: 50%;
+        height: 50%;
+        background: radial-gradient(circle, rgba(139, 92, 246, 0.06) 0%, transparent 70%);
+        filter: blur(100px);
+        pointer-events: none;
+        z-index: 1;
+      }
+
+      .app-container::after {
+        content: '';
+        position: absolute;
+        bottom: -10%;
+        right: -10%;
+        width: 50%;
+        height: 50%;
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.06) 0%, transparent 70%);
+        filter: blur(100px);
+        pointer-events: none;
+        z-index: 1;
+      }
+
+      /* HEADER COMPONENT (Frosted Glass Navbar) */
+      .glass-header {
+        height: 65px;
+        background-color: var(--bg-navbar);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-bottom: 1px solid var(--border-glass);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 2rem;
+        z-index: 100;
+        position: relative;
+      }
+
+      .brand-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+      }
+
+      .gradient-logo {
+        font-family: var(--font-sans);
+        font-weight: 800;
+        font-size: 1.35rem;
+        letter-spacing: -0.03em;
+        background: linear-gradient(90deg, #3b82f6, #8b5cf6, #10b981, #3b82f6);
+        background-size: 300% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: flowLogoGradient 6s ease infinite;
+      }
+
+      @keyframes flowLogoGradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+
+      .live-stats-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .stat-chip {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-glass);
+        padding: 0.3rem 0.75rem;
+        border-radius: 99px;
+        font-size: 0.725rem;
+        font-weight: 500;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .stat-chip.physics { border-color: rgba(59, 130, 246, 0.2); }
+      .stat-chip.chemistry { border-color: rgba(16, 185, 129, 0.2); }
+      .stat-chip.mathematics { border-color: rgba(139, 92, 246, 0.2); }
+
+      .stat-chip strong {
+        color: var(--text-main);
+        font-weight: 700;
+      }
+
+      /* 3-COLUMN LAYOUT BODY */
+      .app-grid-body {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 290px 380px 1fr;
+        height: calc(100vh - 65px);
+        width: 100vw;
+        overflow: hidden;
+        z-index: 10;
+        position: relative;
+      }
+
+      /* COLUMN 1: SIDEBAR FILTERS */
+      .sidebar-filters-column {
+        background-color: rgba(11, 15, 25, 0.5);
+        border-right: 1px solid var(--border-glass);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+
+      .filter-menu-scroll {
+        flex: 1;
+        overflow-y: auto;
+        padding: 2rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .filter-group-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .filter-heading {
+        font-size: 0.725rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        position: relative;
+        width: max-content;
+      }
+
+      /* Hover animated underline for labels */
+      .filter-heading::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 0;
+        height: 1px;
+        background: var(--accent);
+        transition: width var(--transition-normal);
+      }
+
+      .filter-group-wrapper:hover .filter-heading::after {
+        width: 100%;
+      }
+
+      .filter-pill-select {
+        width: 100%;
+        padding: 0.65rem 1rem;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-glass);
+        border-radius: 99px; /* Pill shape */
+        color: var(--text-main);
+        font-size: 0.825rem;
+        outline: none;
+        cursor: pointer;
+        transition: var(--transition-fast);
+      }
+
+      .filter-pill-select:hover {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: var(--border-glass-hover);
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.02);
+      }
+
+      .filter-pill-select:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-glow);
+      }
+
+      .filter-pill-select option {
+        background-color: var(--bg-app);
+      }
+
+      .filter-pill-select.active-filter-highlight {
+        border-color: var(--accent);
+        background: rgba(var(--accent-rgb), 0.08);
+      }
+
+      .sidebar-search-box {
+        position: relative;
+      }
+
+      .sidebar-search-field {
+        width: 100%;
+        padding: 0.65rem 1rem 0.65rem 2.25rem;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-glass);
+        border-radius: 99px;
+        color: var(--text-main);
+        font-size: 0.825rem;
+        outline: none;
+        transition: var(--transition-fast);
+      }
+
+      .sidebar-search-field:focus {
+        border-color: var(--accent);
+      }
+
+      .sidebar-search-icon {
+        position: absolute;
+        left: 0.85rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-dim);
+        width: 14px;
+        height: 14px;
+      }
+
+      .sidebar-action-footer {
+        padding: 1.25rem 1.5rem;
+        border-top: 1px solid var(--border-glass);
+      }
+
+      .btn-pill-reset {
+        width: 100%;
+        padding: 0.65rem;
+        background: transparent;
+        border: 1px dashed var(--border-glass);
+        color: var(--text-muted);
+        border-radius: 99px;
+        font-size: 0.775rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        transition: var(--transition-fast);
+      }
+
+      .btn-pill-reset:hover {
+        border-color: var(--text-muted);
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--text-main);
+      }
+
+      /* COLUMN 2: QUESTION LIST FEED */
+      .questions-list-column {
+        background-color: rgba(9, 13, 22, 0.45);
+        border-right: 1px solid var(--border-glass);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+
+      .column-subheader {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--border-glass);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .subheader-title {
+        font-family: var(--font-sans);
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--text-main);
+      }
+
+      .subheader-counter {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        background: rgba(255, 255, 255, 0.04);
+        padding: 0.2rem 0.55rem;
+        border-radius: 99px;
+        border: 1px solid var(--border-glass);
+      }
+
+      .questions-feed-scroll {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.95rem;
+      }
+
+      /* Glassmorphism Question Cards */
+      .glass-question-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-glass);
+        border-radius: 14px;
+        padding: 1.25rem;
+        cursor: pointer;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        transition: var(--transition-normal);
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        position: relative;
+      }
+
+      .card-accent-strip {
+        position: absolute;
+        left: 0;
+        top: 1.25rem;
+        bottom: 1.25rem;
+        width: 3px;
+        border-radius: 0 4px 4px 0;
+      }
+      .card-accent-strip.physics { background-color: var(--physics); }
+      .card-accent-strip.chemistry { background-color: var(--chemistry); }
+      .card-accent-strip.mathematics { background-color: var(--mathematics); }
+
+      .card-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-left: 0.5rem;
+      }
+
+      .card-subject-badge {
+        font-size: 0.65rem;
+        font-weight: 800;
+        padding: 0.15rem 0.45rem;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .card-subject-badge.physics { background: rgba(59, 130, 246, 0.12); color: var(--physics); }
+      .card-subject-badge.chemistry { background: rgba(16, 185, 129, 0.12); color: var(--chemistry); }
+      .card-subject-badge.mathematics { background: rgba(139, 92, 246, 0.12); color: var(--mathematics); }
+
+      .card-year-badge {
+        font-size: 0.675rem;
+        color: var(--text-dim);
+        font-weight: 600;
+      }
+
+      .card-snippet {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        line-height: 1.55;
+        padding-left: 0.5rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        word-break: break-word;
+      }
+
+      .card-tags-row {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding-left: 0.5rem;
+      }
+
+      .card-pill-tag {
+        font-size: 0.65rem;
+        padding: 0.15rem 0.5rem;
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--text-muted);
+        border-radius: 99px;
+        border: 1px solid var(--border-glass);
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .card-pill-tag.difficulty {
+        font-weight: 500;
+      }
+
+      .difficulty-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .difficulty-dot.easy { background: var(--badge-easy); box-shadow: 0 0 6px var(--badge-easy); }
+      .difficulty-dot.medium { background: var(--badge-medium); box-shadow: 0 0 6px var(--badge-medium); }
+      .difficulty-dot.hard { background: var(--badge-hard); box-shadow: 0 0 6px var(--badge-hard); }
+
+      /* Card Interactive hover/active states */
+      .glass-question-card:hover {
+        transform: translateY(-2px) scale(1.015);
+        background: var(--bg-card-hover);
+        border-color: var(--border-glass-hover);
+        box-shadow: 
+          0 8px 30px rgba(0, 0, 0, 0.35),
+          0 0 8px var(--accent-glow);
+      }
+
+      .glass-question-card.active-card-selected {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: var(--accent-color, var(--accent));
+        box-shadow: 
+          0 8px 32px rgba(0, 0, 0, 0.4), 
+          inset 0 0 0 1px var(--accent-color, var(--accent)),
+          0 0 12px var(--accent-glow);
+      }
+
+      /* COLUMN 3: DETAILED INSPECTION VIEW */
+      .question-details-column {
+        background-color: transparent;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .details-scroll-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 3rem;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+      }
+
+      .detail-glassmorphic-card {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-glass);
+        border-radius: 20px;
+        padding: 2.5rem;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+      }
+
+      .detail-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border-glass);
+      }
+
+      .detail-card-title {
+        font-family: var(--font-sans);
+        font-size: 1.35rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+
+      .detail-card-subtitle {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-top: 0.35rem;
+      }
+
+      .detail-header-badges {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .detail-capsule-badge {
+        font-size: 0.725rem;
+        font-weight: 700;
+        padding: 0.3rem 0.75rem;
+        border-radius: 99px;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+      }
+
+      .detail-capsule-badge.easy { background: rgba(16, 185, 129, 0.1); color: var(--badge-easy); border: 1px solid rgba(16, 185, 129, 0.2); }
+      .detail-capsule-badge.medium { background: rgba(234, 179, 8, 0.1); color: var(--badge-medium); border: 1px solid rgba(234, 179, 8, 0.2); }
+      .detail-capsule-badge.hard { background: rgba(239, 68, 68, 0.1); color: var(--badge-hard); border: 1px solid rgba(239, 68, 68, 0.2); }
+
+      .detail-capsule-badge.exam {
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text-main);
+        border: 1px solid var(--border-glass);
+      }
+
+      .large-question-text {
+        font-size: 1.125rem; /* 18px */
+        line-height: 1.75;
+        color: #e5e7eb;
+      }
+
+      .specs-grid-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin-top: 2.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border-glass);
+        font-size: 0.8rem;
+        color: var(--text-muted);
+      }
+
+      .specs-grid-row strong {
+        color: var(--text-main);
+      }
+
+      /* Floating Action Panel */
+      .action-dock-panel {
+        display: flex;
+        justify-content: flex-end;
+        padding: 1.5rem 3rem;
+        border-top: 1px solid var(--border-glass);
+        background: rgba(13, 17, 23, 0.35);
+        backdrop-filter: blur(10px);
+      }
+
+      .btn-ask-tutor-glowing {
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-glow) 150%);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        padding: 0.85rem 1.6rem;
+        border-radius: 12px;
+        font-family: var(--font-sans);
+        font-weight: 700;
+        font-size: 0.85rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        transition: var(--transition-normal);
+        animation: pulsingRingGlow 2.5s infinite;
+      }
+
+      @keyframes pulsingRingGlow {
+        0% {
+          box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.5), 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(var(--accent-rgb), 0), 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0), 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+      }
+
+      .btn-ask-tutor-glowing:hover {
+        transform: translateY(-2px);
+        border-color: rgba(255, 255, 255, 0.25);
+        filter: brightness(1.1);
+      }
+
+      /* SPRING SLIDE CHAT DRAWER PANEL */
+      .drawer-sliding-overlay {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 500px;
+        height: 100%;
+        background-color: var(--bg-drawer);
+        border-left: 1px solid var(--border-glass);
+        box-shadow: -15px 0 45px rgba(0, 0, 0, 0.6);
+        z-index: 500;
+        display: flex;
+        flex-direction: column;
+        transform: translateX(100%);
+        transition: transform var(--transition-spring);
+      }
+
+      .drawer-sliding-overlay.is-drawer-visible {
+        transform: translateX(0);
+      }
+
+      .drawer-top-navbar {
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid var(--border-glass);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.2);
+      }
+
+      .drawer-bot-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .bot-avatar-glowing {
+        background: linear-gradient(135deg, var(--accent) 0%, #ec4899 150%);
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.15rem;
+        box-shadow: 0 0 10px var(--accent-glow);
+      }
+
+      .bot-text-title {
+        font-weight: 700;
+        font-size: 0.95rem;
+      }
+
+      .bot-status-online {
+        font-size: 0.65rem;
+        color: #10b981;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        margin-top: 0.1rem;
+      }
+
+      .bot-pulse-dot {
+        width: 5px;
+        height: 5px;
+        background: #10b981;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+      }
+
+      /* Chat Message Bubbles */
+      .drawer-bubbles-feed {
+        flex: 1;
+        overflow-y: auto;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .bubble-message-card {
+        max-width: 85%;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        animation: bubbleSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      @keyframes bubbleSlideUp {
+        from { opacity: 0; transform: translateY(15px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .bubble-message-card.user {
+        align-self: flex-end;
+        background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.15) 0%, rgba(var(--accent-rgb), 0.05) 100%);
+        border: 1px solid rgba(var(--accent-rgb), 0.3);
+        padding: 0.9rem 1.15rem;
+        border-radius: 16px 16px 0 16px;
+        box-shadow: 0 4px 15px rgba(var(--accent-rgb), 0.05);
+      }
+
+      .bubble-message-card.tutor {
+        align-self: flex-start;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-glass);
+        padding: 1.1rem 1.25rem;
+        border-radius: 16px 16px 16px 0;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(8px);
+      }
+
+      .bubble-message-card.user .bubble-role-label { color: rgba(255, 255, 255, 0.8); }
+      .bubble-message-card.tutor .bubble-role-label { color: var(--text-muted); }
+
+      .bubble-role-label {
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .bubble-rendered-text {
+        font-size: 0.875rem;
+        color: #f3f4f6;
+        line-height: 1.6;
+      }
+
+      /* REAL-TIME BLINKING STREAMING CURSOR */
+      .streaming-cursor {
+        display: inline-block;
+        width: 2px;
+        height: 14px;
+        background-color: var(--accent);
+        margin-left: 2px;
+        animation: blinkCursorEffect 0.8s steps(2, start) infinite;
+        vertical-align: middle;
+      }
+
+      @keyframes blinkCursorEffect {
+        to { visibility: hidden; }
+      }
+
+      /* Chat Input form drawer */
+      .drawer-footer-composer {
+        padding: 1.5rem 2rem;
+        border-top: 1px solid var(--border-glass);
+        background: rgba(0, 0, 0, 0.25);
+      }
+
+      .composer-input-row {
+        display: flex;
+        gap: 0.75rem;
+      }
+
+      .composer-text-box {
+        flex: 1;
+        padding: 0.8rem 1.15rem;
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid var(--border-glass);
+        border-radius: 99px; /* Pill shape input */
+        color: var(--text-main);
+        font-size: 0.85rem;
+        outline: none;
+        transition: var(--transition-fast);
+      }
+
+      .composer-text-box:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-glow);
+      }
+
+      .composer-text-box:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .btn-composer-submit {
+        background: var(--accent);
+        color: white;
+        border: none;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: var(--transition-fast);
+        box-shadow: 0 4px 10px var(--accent-glow);
+        flex-shrink: 0;
+      }
+
+      .btn-composer-submit:hover:not(:disabled) {
+        transform: scale(1.05);
+        box-shadow: 0 6px 14px var(--accent-glow);
+      }
+
+      .btn-composer-submit:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        box-shadow: none;
+      }
+
+      /* TOAST ALERT OVERLAY STYLE */
+      .toast-alerts-container {
+        position: absolute;
+        bottom: 2rem;
+        right: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        z-index: 1000;
+      }
+
+      .toast-alert-card {
+        background: rgba(9, 13, 22, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--border-glass);
+        padding: 0.8rem 1.2rem;
+        border-radius: 99px; /* Pill toast alerts */
+        font-size: 0.8rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        animation: toastNotificationFadeIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.175) forwards;
+      }
+
+      @keyframes toastNotificationFadeIn {
+        from { opacity: 0; transform: translateY(15px) scale(0.95); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+
+      .toast-alert-card.info { border-color: rgba(59, 130, 246, 0.25); color: #93c5fd; }
+      .toast-alert-card.error { border-color: rgba(239, 68, 68, 0.25); color: #fca5a5; }
+      .toast-alert-card.success { border-color: rgba(16, 185, 129, 0.25); color: #6ee7b7; }
+
+      /* SKELETON CARD LOADING SYSTEM */
+      .skeleton-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-glass);
+        border-radius: 14px;
+        padding: 1.25rem;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .skeleton-pulse {
+        background: linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0.03) 25%,
+          rgba(255, 255, 255, 0.08) 50%,
+          rgba(255, 255, 255, 0.03) 75%
+        );
+        background-size: 200% 100%;
+        animation: skeletonPulseLoading 1.5s infinite;
+      }
+
+      @keyframes skeletonPulseLoading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+
+      .skeleton-card .card-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .skeleton-badge {
+        width: 70px;
+        height: 16px;
+        border-radius: 4px;
+      }
+
+      .skeleton-id {
+        width: 40px;
+        height: 14px;
+        border-radius: 4px;
+      }
+
+      .skeleton-line {
+        width: 100%;
+        height: 14px;
+        border-radius: 4px;
+      }
+
+      .skeleton-line.short {
+        width: 70%;
+      }
+
+      .skeleton-tags {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.25rem;
+      }
+
+      .skeleton-tag {
+        width: 60px;
+        height: 16px;
+        border-radius: 99px;
+      }
+
+      /* EMPTY WORKSPACE PLACEHOLDER */
+      .empty-workspace {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        flex: 1;
+        height: 100%;
+        color: var(--text-dim);
+        gap: 1rem;
+      }
+
+      .empty-icon {
+        width: 48px;
+        height: 48px;
+        opacity: 0.4;
+        animation: floatEffect 3s ease-in-out infinite;
+      }
+
+      @keyframes floatEffect {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-8px); }
+        100% { transform: translateY(0px); }
+      }
+
+      .empty-title {
+        font-family: var(--font-sans);
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--text-muted);
+      }
+
+      /* PAGINATION CONTROL PANEL */
+      .pagination-panel {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        border-top: 1px solid var(--border-glass);
+        background: rgba(9, 13, 22, 0.6);
+      }
+
+      .pagination-btn {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-glass);
+        color: var(--text-main);
+        padding: 0.45rem 0.85rem;
+        border-radius: 8px;
+        font-size: 0.775rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        transition: var(--transition-fast);
+      }
+
+      .pagination-btn:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: var(--border-glass-hover);
+      }
+
+      .pagination-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      .pagination-info {
+        font-size: 0.775rem;
+        color: var(--text-muted);
+      }
+
+      /* TOP PROGRESS LOADING BAR */
+      .top-progress-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: transparent;
+        z-index: 1000;
+        overflow: hidden;
+      }
+
+      .top-progress-bar {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, var(--physics), var(--chemistry), var(--mathematics));
+        animation: progressPulseGlow 2s infinite ease-in-out;
+        transform-origin: 0% 50%;
+      }
+
+      @keyframes progressPulseGlow {
+        0% { transform: scaleX(0); }
+        50% { transform: scaleX(0.5); }
+        100% { transform: scaleX(1); opacity: 0; }
+      }
+
+      .spec-item {
+        flex: 1 1 200px;
+        background: rgba(255, 255, 255, 0.01);
+        border: 1px solid var(--border-glass);
+        padding: 0.65rem 1rem;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .btn-drawer-action {
+        background: transparent;
+        border: 1px solid var(--border-glass);
+        color: var(--text-muted);
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: var(--transition-fast);
+      }
+
+      .btn-drawer-action:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: var(--border-glass-hover);
+        color: var(--text-main);
+      }
+
+      /* KATEX MATH FORMULA STYLING WRAPPERS */
+      .katex-display-wrapper {
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 0.75rem 0;
+        margin: 0.5rem 0;
+        max-width: 100%;
+      }
+
+      .katex-inline-wrapper {
+        padding: 0 0.15rem;
+        display: inline-block;
+        vertical-align: middle;
+      }
+
+      /* RESPONSIVE LAYOUT SCALING */
+      @media (max-width: 1024px) {
+        .app-grid-body {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto auto 1fr;
+          height: calc(100vh - 65px);
+          overflow-y: auto;
+        }
+        
+        .sidebar-filters-column {
+          height: auto;
+          border-right: none;
+          border-bottom: 1px solid var(--border-glass);
+        }
+        
+        .questions-list-column {
+          height: 320px;
+          border-right: none;
+          border-bottom: 1px solid var(--border-glass);
+        }
+
+        .question-details-column {
+          height: auto;
+        }
+
+        .drawer-sliding-overlay {
+          width: 100%;
+          height: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- React 18 production build UMD CDNs -->
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Babel standalone CDN for JSX compilation in the browser -->
+    <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+    <!-- KaTeX JS CDN for LaTeX formatting -->
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js" integrity="sha384-t5V14e6G5WD47hyLw1L9KcdWh050N0d3gqc418f4l62bUxsB70D.hGmWc1.H5g" crossorigin="anonymous"></script>
+
+    <!-- React Application Logic -->
+    <script type="text/babel">
+      
+      // ==========================================
+      // Clean Custom SVG Icon Components (Lucide-like)
+      // ==========================================
+      
+      const BookOpen = ({ size = 16, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+        </svg>
+      );
+
+      const GraduationCap = ({ size = 24, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" />
+          <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
+        </svg>
+      );
+
+      const Search = ({ size = 16, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+      );
+
+      const RotateCcw = ({ size = 16, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+          <path d="M3 3v5h5" />
+        </svg>
+      );
+
+      const Award = ({ size = 16, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <circle cx="12" cy="8" r="7" />
+          <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+        </svg>
+      );
+
+      const Compass = ({ size = 16, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <circle cx="12" cy="12" r="10" />
+          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+        </svg>
+      );
+
+      const Layers = ({ size = 16, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <polygon points="12 2 2 7 12 12 22 7 12 2" />
+          <polyline points="2 17 12 22 22 17" />
+          <polyline points="2 12 12 17 22 12" />
+        </svg>
+      );
+
+      const Calendar = ({ size = 16, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+      );
+
+      const ChevronLeft = ({ size = 16, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+      );
+
+      const ChevronRight = ({ size = 16, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      );
+
+      const Inbox = ({ size = 16, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+          <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+        </svg>
+      );
+
+      const Sparkles = ({ size = 16, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+          <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5.5Z" opacity="0.6" />
+          <path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z" opacity="0.6" />
+        </svg>
+      );
+
+      const Info = ({ size = 16, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="16" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+      );
+
+      const MessageSquareCode = ({ size = 16, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          <path d="m10 8-2 2 2 2" />
+          <path d="m14 8 2 2-2 2" />
+        </svg>
+      );
+
+      const Send = ({ size = 16, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <line x1="22" y1="2" x2="11" y2="13" />
+          <polygon points="22 2 15 22 11 13 2 9 22 2" />
+        </svg>
+      );
+
+      const RefreshCw = ({ size = 16, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <polyline points="23 4 23 10 17 10" />
+          <polyline points="1 20 1 14 7 14" />
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+        </svg>
+      );
+
+      const X = ({ size = 16, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      );
+
+      const CheckCircle = ({ size = 16, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+      );
+
+      const AlertCircle = ({ size = 16, className, style }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+      );
+
+      // ==========================================
+      // Skeleton placeholder Card Component
+      // ==========================================
+      
+      const SkeletonCard = () => (
+        <div className="skeleton-card">
+          <div className="card-top">
+            <div className="skeleton-badge skeleton-pulse"></div>
+            <div className="skeleton-id skeleton-pulse"></div>
+          </div>
+          <div className="skeleton-line skeleton-pulse"></div>
+          <div className="skeleton-line short skeleton-pulse"></div>
+          <div className="skeleton-tags">
+            <div className="skeleton-tag skeleton-pulse"></div>
+            <div className="skeleton-tag skeleton-pulse"></div>
+          </div>
+        </div>
+      );
+
+      // ==========================================
+      // LaTeX Math Equation Formatting Component
+      // ==========================================
+      
+      const LatexRenderer = ({ text = "", className = "" }) => {
+        const renderedContent = React.useMemo(() => {
+          if (!text) return null;
+
+          const tokenRegex = /(\$\$.*?\$\$|\$.*?\$)/gs;
+          const segments = text.split(tokenRegex);
+
+          return segments.map((seg, idx) => {
+            if (seg.startsWith("$$") && seg.endsWith("$$")) {
+              const mathContent = seg.substring(2, seg.length - 2).trim();
+              try {
+                const rawHtml = window.katex.renderToString(mathContent, {
+                  displayMode: true,
+                  throwOnError: false,
+                });
+                return (
+                  <div
+                    key={idx}
+                    className="katex-display-wrapper"
+                    dangerouslySetInnerHTML={{ __html: rawHtml }}
+                  />
+                );
+              } catch (e) {
+                console.error("KaTeX Block Render Error:", e);
+                return <pre key={idx}>{seg}</pre>;
+              }
+            }
+
+            if (seg.startsWith("$") && seg.endsWith("$")) {
+              const mathContent = seg.substring(1, seg.length - 1).trim();
+              try {
+                const rawHtml = window.katex.renderToString(mathContent, {
+                  displayMode: false,
+                  throwOnError: false,
+                });
+                return (
+                  <span
+                    key={idx}
+                    className="katex-inline-wrapper"
+                    dangerouslySetInnerHTML={{ __html: rawHtml }}
+                  />
+                );
+              } catch (e) {
+                console.error("KaTeX Inline Render Error:", e);
+                return <span key={idx}>{seg}</span>;
+              }
+            }
+
+            return (
+              <span key={idx} style={{ whiteSpace: "pre-wrap" }}>
+                {seg}
+              </span>
+            );
+          });
+        }, [text]);
+
+        return <div className={`latex-content ${className}`}>{renderedContent}</div>;
+      };
+
+      // ==========================================
+      // Floating Toast Stack Notification Component
+      // ==========================================
+      
+      const ToastContainer = ({ toasts = [], removeToast }) => {
+        if (toasts.length === 0) return null;
+
+        return (
+          <div className="toast-alerts-container">
+            {toasts.map((t) => {
+              let Icon = Info;
+              if (t.type === "error") Icon = AlertCircle;
+              if (t.type === "success") Icon = CheckCircle;
+
+              return (
+                <div key={t.id} className={`toast-alert-card ${t.type}`}>
+                  <Icon size={16} />
+                  <span>{t.message}</span>
+                  <button
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "inherit",
+                      cursor: "pointer",
+                      marginLeft: "0.5rem",
+                      display: "flex",
+                      alignItems: "center"
+                    }}
+                    onClick={() => removeToast(t.id)}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        );
+      };
+
+      // ==========================================
+      // Filter Sidebar Navigation Column Component
+      // ==========================================
+      
+      const FilterSidebar = ({ filters, selectedFilters, setFilter, resetFilters }) => {
+        const [localSearch, setLocalSearch] = React.useState(selectedFilters.search || "");
+
+        React.useEffect(() => {
+          setLocalSearch(selectedFilters.search || "");
+        }, [selectedFilters.search]);
+
+        const handleSearchSubmit = (e) => {
+          e.preventDefault();
+          setFilter("search", localSearch);
+        };
+
+        const availableChapters = selectedFilters.subject && filters.subject_map[selectedFilters.subject]
+          ? filters.subject_map[selectedFilters.subject].chapters
+          : [];
+          
+        const availableTopics = selectedFilters.subject && filters.subject_map[selectedFilters.subject]
+          ? filters.subject_map[selectedFilters.subject].topics
+          : [];
+
+        return (
+          <div className="sidebar-filters-column">
+            <div className="filter-menu-scroll">
+              
+              {/* Search */}
+              <form onSubmit={handleSearchSubmit} className="filter-group-wrapper">
+                <label className="filter-heading"><Search size={12} /> Search</label>
+                <div className="sidebar-search-box">
+                  <input
+                    type="text"
+                    className={`sidebar-search-field ${localSearch ? "active-filter-highlight" : ""}`}
+                    placeholder="Keyword & press Enter..."
+                    value={localSearch}
+                    onChange={(e) => setLocalSearch(e.target.value)}
+                  />
+                  <Search className="sidebar-search-icon" />
+                </div>
+              </form>
+
+              {/* Subject */}
+              <div className="filter-group-wrapper">
+                <label className="filter-heading"><BookOpen size={12} /> Subject</label>
+                <select
+                  className={`filter-pill-select ${selectedFilters.subject ? "active-filter-highlight" : ""}`}
+                  value={selectedFilters.subject}
+                  onChange={(e) => setFilter("subject", e.target.value)}
+                >
+                  <option value="">All Subjects</option>
+                  {filters.subjects.map((sub) => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Exam Type */}
+              <div className="filter-group-wrapper">
+                <label className="filter-heading"><Award size={12} /> Category</label>
+                <select
+                  className={`filter-pill-select ${selectedFilters.exam_type ? "active-filter-highlight" : ""}`}
+                  value={selectedFilters.exam_type}
+                  onChange={(e) => setFilter("exam_type", e.target.value)}
+                >
+                  <option value="">All Exams</option>
+                  {filters.exam_types.map((ex) => (
+                    <option key={ex} value={ex}>{ex.replace("_", " ")}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Chapter (Requires Subject first) */}
+              <div className="filter-group-wrapper">
+                <label className="filter-heading"><Compass size={12} /> Chapter</label>
+                <select
+                  className={`filter-pill-select ${selectedFilters.chapter ? "active-filter-highlight" : ""}`}
+                  value={selectedFilters.chapter}
+                  onChange={(e) => setFilter("chapter", e.target.value)}
+                  disabled={!selectedFilters.subject}
+                >
+                  <option value="">
+                    {selectedFilters.subject ? "All Chapters" : "Select Subject First"}
+                  </option>
+                  {availableChapters.map((chap) => (
+                    <option key={chap} value={chap}>{chap.split(" - ").pop()}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Topic (Requires Subject first) */}
+              <div className="filter-group-wrapper">
+                <label className="filter-heading"><Layers size={12} /> Topic</label>
+                <select
+                  className={`filter-pill-select ${selectedFilters.topic ? "active-filter-highlight" : ""}`}
+                  value={selectedFilters.topic}
+                  onChange={(e) => setFilter("topic", e.target.value)}
+                  disabled={!selectedFilters.subject}
+                >
+                  <option value="">
+                    {selectedFilters.subject ? "All Topics" : "Select Subject First"}
+                  </option>
+                  {availableTopics.map((top) => (
+                    <option key={top} value={top}>{top}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Difficulty */}
+              <div className="filter-group-wrapper">
+                <label className="filter-heading"><Award size={12} /> Difficulty</label>
+                <select
+                  className={`filter-pill-select ${selectedFilters.difficulty ? "active-filter-highlight" : ""}`}
+                  value={selectedFilters.difficulty}
+                  onChange={(e) => setFilter("difficulty", e.target.value)}
+                >
+                  <option value="">All Levels</option>
+                  {filters.difficulties.map((diff) => (
+                    <option key={diff} value={diff}>{diff}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Year */}
+              <div className="filter-group-wrapper">
+                <label className="filter-heading"><Calendar size={12} /> Year</label>
+                <select
+                  className={`filter-pill-select ${selectedFilters.year ? "active-filter-highlight" : ""}`}
+                  value={selectedFilters.year}
+                  onChange={(e) => setFilter("year", e.target.value)}
+                >
+                  <option value="">All Years</option>
+                  {filters.years.map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="sidebar-action-footer">
+              <button className="btn-pill-reset" onClick={resetFilters}>
+                <RotateCcw size={13} /> Clear Filters
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // ==========================================
+      // Questions Feed List & Pagination Column Component
+      // ==========================================
+      
+      const QuestionList = ({
+        questions = [],
+        totalQuestions = 0,
+        currentPage = 1,
+        totalPages = 1,
+        loading = false,
+        selectedQuestion = null,
+        fetchQuestions,
+        selectQuestion,
+      }) => {
+        return (
+          <div className="questions-list-column">
+            <div className="column-subheader">
+              <h3 className="subheader-title">Questions Feed</h3>
+              <span className="subheader-counter">{totalQuestions} Match{totalQuestions !== 1 ? "es" : ""}</span>
+            </div>
+
+            <div className="questions-feed-scroll">
+              {loading ? (
+                <React.Fragment>
+                  <SkeletonCard />
+                  <SkeletonCard />
+                  <SkeletonCard />
+                  <SkeletonCard />
+                </React.Fragment>
+              ) : questions.length === 0 ? (
+                <div style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flex: 1,
+                  color: "var(--text-dim)",
+                  gap: "0.5rem"
+                }}>
+                  <Inbox size={32} />
+                  <span style={{ fontSize: "0.85rem" }}>No matching questions found</span>
+                </div>
+              ) : (
+                questions.map((q) => {
+                  const qId = q.question_number || q.id;
+                  const isSelected = selectedQuestion && (selectedQuestion.question_number === q.question_number);
+                  const subjectClass = q.subject.toLowerCase();
+                  const diffClass = q.difficulty.toLowerCase();
+
+                  const accentColor = q.subject === "Physics" 
+                    ? "var(--physics)" 
+                    : q.subject === "Chemistry" 
+                      ? "var(--chemistry)" 
+                      : "var(--mathematics)";
+
+                  return (
+                    <div
+                      key={qId}
+                      className={`glass-question-card ${isSelected ? "active-card-selected" : ""}`}
+                      style={{ "--accent-color": accentColor }}
+                      onClick={() => selectQuestion(q)}
+                    >
+                      <div className={`card-accent-strip ${subjectClass}`}></div>
+                      
+                      <div className="card-header-row">
+                        <span className={`card-subject-badge ${subjectClass}`}>
+                          {q.subject}
+                        </span>
+                        <span className="card-year-badge">{q.year}</span>
+                      </div>
+
+                      <div className="card-snippet">
+                        {q.raw_text ? q.raw_text.replace(/^Question:\s*/i, "").substring(0, 90) + "..." : ""}
+                      </div>
+
+                      <div className="card-tags-row">
+                        <span className="card-pill-tag difficulty">
+                          <span className={`difficulty-dot ${diffClass}`}></span>
+                          {q.difficulty}
+                        </span>
+                        <span className="card-pill-tag">
+                          Q#{qId}
+                        </span>
+                        <span className="card-pill-tag">
+                          {q.exam_type.replace("_", " ")}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="pagination-panel">
+              <button
+                className="pagination-btn"
+                disabled={currentPage === 1 || loading}
+                onClick={() => fetchQuestions(currentPage - 1)}
+              >
+                <ChevronLeft size={14} /> Prev
+              </button>
+              <span className="pagination-info">
+                Page {currentPage} of {totalPages || 1}
+              </span>
+              <button
+                className="pagination-btn"
+                disabled={currentPage === totalPages || totalPages === 0 || loading}
+                onClick={() => fetchQuestions(currentPage + 1)}
+              >
+                Next <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // ==========================================
+      // Detailed Inspection Workspace Component
+      // ==========================================
+      
+      const QuestionDetail = ({ selectedQuestion = null, chatHistory = [], toggleChat }) => {
+        if (!selectedQuestion) {
+          return (
+            <div className="empty-workspace">
+              <Sparkles className="empty-icon" style={{ color: "var(--physics)" }} />
+              <h2 className="empty-title">Select a JEE Question</h2>
+              <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", maxWidth: "340px", textAlign: "center", marginTop: "0.5rem" }}>
+                Choose a question from the feed to view full texts, mathematical equations, and toggle the AI tutor chat.
+              </p>
+            </div>
+          );
+        }
+
+        const qId = selectedQuestion.question_number || selectedQuestion.id;
+        const examLabel = selectedQuestion.exam_type ? selectedQuestion.exam_type.replace("_", " ") : "JEE";
+        const subjectClass = selectedQuestion.subject.toLowerCase();
+
+        return (
+          <div className="question-details-column" data-subject={subjectClass}>
+            <div className="details-scroll-content">
+              <div className="detail-glassmorphic-card">
+                <div className="detail-card-header">
+                  <div>
+                    <h2 className="detail-card-title">Question Inspection</h2>
+                    <div className="detail-card-subtitle">
+                      {selectedQuestion.chapter || "General"} • {selectedQuestion.topic || "General"}
+                    </div>
+                  </div>
+                  <div className="detail-header-badges">
+                    <span className="detail-capsule-badge exam">{examLabel} ({selectedQuestion.year})</span>
+                    <span className={`detail-capsule-badge ${selectedQuestion.difficulty.toLowerCase()}`}>
+                      {selectedQuestion.difficulty}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="large-question-text">
+                  <LatexRenderer text={selectedQuestion.raw_text} />
+                </div>
+
+                <div className="specs-grid-row">
+                  {selectedQuestion.marks_positive !== undefined && (
+                    <div className="spec-item">
+                      <strong>Correct:</strong> +{selectedQuestion.marks_positive} Marks
+                    </div>
+                  )}
+                  {selectedQuestion.marks_negative !== undefined && (
+                    <div className="spec-item">
+                      <strong>Incorrect:</strong> {selectedQuestion.marks_negative} Marks
+                    </div>
+                  )}
+                  {selectedQuestion.question_type && (
+                    <div className="spec-item">
+                      <strong>Format:</strong> {selectedQuestion.question_type}
+                    </div>
+                  )}
+                  {selectedQuestion.paper_filename && (
+                    <div className="spec-item" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <strong>Source:</strong> {selectedQuestion.paper_filename}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div style={{
+                background: "rgba(255, 255, 255, 0.01)",
+                border: "1px dashed var(--border-glass)",
+                borderRadius: "16px",
+                padding: "1.25rem",
+                display: "flex",
+                gap: "0.75rem",
+                alignItems: "flex-start",
+                fontSize: "0.825rem",
+                color: "var(--text-muted)"
+              }}>
+                <Info size={16} style={{ color: "var(--accent)", flexShrink: 0, marginTop: "0.15rem" }} />
+                <div>
+                  <strong>Interactive Solver:</strong> Ask the AI Tutor to provide formulas, hints, explain traps, or break down calculations. Click the action button below to slide-out the tutor panel.
+                </div>
+              </div>
+            </div>
+
+            <div className="action-dock-panel">
+              <button className="btn-ask-tutor-glowing" onClick={() => toggleChat(true)}>
+                <MessageSquareCode size={16} />
+                <span>Ask AI Tutor {chatHistory.length > 0 ? `(${chatHistory.length})` : ""}</span>
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // ==========================================
+      // Sliding Drawer AI Tutor Panel Component
+      // ==========================================
+      
+      const TutorChat = ({
+        selectedQuestion = null,
+        chatHistory = [],
+        tutorTyping = false,
+        isChatOpen = false,
+        sendChatMessage,
+        resetChat,
+        toggleChat,
+      }) => {
+        const [message, setMessage] = React.useState("");
+        const messagesEndRef = React.useRef(null);
+
+        const scrollToBottom = () => {
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        };
+
+        React.useEffect(() => {
+          if (isChatOpen) {
+            scrollToBottom();
+          }
+        }, [chatHistory, isChatOpen]);
+
+        const handleSubmit = (e) => {
+          e.preventDefault();
+          if (!message.trim() || tutorTyping) return;
+          sendChatMessage(message);
+          setMessage("");
+        };
+
+        if (!selectedQuestion) return null;
+
+        return (
+          <div className={`drawer-sliding-overlay ${isChatOpen ? "is-drawer-visible" : ""}`}>
+            <div className="drawer-top-navbar">
+              <div className="drawer-bot-info">
+                <div className="bot-avatar-glowing">🤖</div>
+                <div>
+                  <div className="bot-text-title">AI Tutor</div>
+                  <div className="bot-status-online">
+                    <span className="bot-pulse-dot"></span> Active
+                  </div>
+                </div>
+              </div>
+              
+              <div className="drawer-header-actions">
+                {chatHistory.length > 0 && (
+                  <button className="btn-drawer-action" onClick={resetChat} title="Clear conversation history">
+                    <RefreshCw size={13} />
+                  </button>
+                )}
+                <button className="btn-drawer-action" onClick={() => toggleChat(false)} title="Close Chat Drawer">
+                  <X size={15} />
+                </button>
+              </div>
+            </div>
+
+            <div className="drawer-bubbles-feed">
+              {chatHistory.length === 0 ? (
+                <div style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "100%",
+                  color: "var(--text-muted)",
+                  gap: "0.85rem",
+                  padding: "2rem",
+                  textAlign: "center"
+                }}>
+                  <Sparkles size={26} style={{ color: "var(--accent)" }} />
+                  <div style={{ fontSize: "0.95rem", fontWeight: "700", color: "var(--text-main)" }}>JEE Tutor Copilot</div>
+                  <div style={{ fontSize: "0.75rem", lineHeight: "1.5", color: "var(--text-dim)" }}>
+                    Ask me anything about physics equations, math derivations, reaction mechanisms, or trap alerts!
+                  </div>
+                </div>
+              ) : (
+                chatHistory.map((msg, idx) => {
+                  const isUser = msg.role === "user";
+                  const isLastMessage = idx === chatHistory.length - 1;
+                  const showCursor = isLastMessage && tutorTyping && !isUser && msg.content !== "";
+
+                  return (
+                    <div key={idx} className={`bubble-message-card ${isUser ? "user" : "tutor"}`}>
+                      <span className="bubble-role-label">
+                        {isUser ? "Student" : "AI Tutor"}
+                      </span>
+                      <div className="bubble-rendered-text">
+                        {isUser ? (
+                          msg.content
+                        ) : msg.content === "" ? (
+                          <div className="typing-indicator">
+                            <div className="typing-dot"></div>
+                            <div className="typing-dot"></div>
+                            <div className="typing-dot"></div>
+                          </div>
+                        ) : (
+                          <React.Fragment>
+                            <LatexRenderer text={msg.content} />
+                            {showCursor && <span className="streaming-cursor"></span>}
+                          </React.Fragment>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            <div className="drawer-footer-composer">
+              <form onSubmit={handleSubmit} className="composer-input-row">
+                <input
+                  type="text"
+                  className="composer-text-box"
+                  placeholder="Type your query for the tutor..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  disabled={tutorTyping}
+                />
+                <button
+                  type="submit"
+                  className="btn-composer-submit"
+                  disabled={tutorTyping || !message.trim()}
+                >
+                  <Send size={13} />
+                </button>
+              </form>
+            </div>
+          </div>
+        );
+      };
+
+      // ==========================================
+      // Main App Layout Core Wrapper
+      // ==========================================
+      
+      const App = () => {
+        const [questions, setQuestions] = React.useState([]);
+        const [totalQuestions, setTotalQuestions] = React.useState(0);
+        const [filters, setFilters] = React.useState({
+          subjects: [],
+          subject_map: {},
+          difficulties: [],
+          years: [],
+          exam_types: []
+        });
+        const [selectedFilters, setSelectedFilters] = React.useState({
+          subject: "",
+          chapter: "",
+          topic: "",
+          difficulty: "",
+          year: "",
+          exam_type: "",
+          search: ""
+        });
+        const [currentPage, setCurrentPage] = React.useState(1);
+        const [totalPages, setTotalPages] = React.useState(1);
+        const [loading, setLoading] = React.useState(false);
+        const [selectedQuestion, setSelectedQuestion] = React.useState(null);
+        const [chatHistory, setChatHistory] = React.useState([]);
+        const [tutorTyping, setTutorTyping] = React.useState(false);
+        const [isChatOpen, setIsChatOpen] = React.useState(false);
+        const [toasts, setToasts] = React.useState([]);
+
+        // Toast Actions
+        const addToast = React.useCallback((message, type = "info") => {
+          const id = Math.random().toString(36).substring(2, 9);
+          setToasts((prev) => [...prev, { id, message, type }]);
+          setTimeout(() => {
+            setToasts((prev) => prev.filter((t) => t.id !== id));
+          }, 3000);
+        }, []);
+
+        const removeToast = React.useCallback((id) => {
+          setToasts((prev) => prev.filter((t) => t.id !== id));
+        }, []);
+
+        // Fetch Filters on load
+        const fetchFilters = async () => {
+          try {
+            const res = await fetch("/api/filters");
+            const data = await res.json();
+            setFilters(data);
+          } catch (e) {
+            console.error("Error loading filters:", e);
+            addToast("Failed to load search filters", "error");
+          }
+        };
+
+        // Fetch Questions Feed
+        const fetchQuestions = React.useCallback(async (page = 1, currentFilters = selectedFilters) => {
+          setLoading(true);
+          setCurrentPage(page);
+
+          const params = new URLSearchParams({
+            page: page.toString(),
+            limit: "12" // Display 12 cards for layouts spacing
+          });
+
+          Object.entries(currentFilters).forEach(([key, val]) => {
+            if (val) params.append(key, val.toString());
+          });
+
+          try {
+            const res = await fetch(`/api/questions?${params.toString()}`);
+            const data = await res.json();
+            
+            setQuestions(data.questions);
+            setTotalQuestions(data.total);
+            setTotalPages(data.pages);
+            setLoading(false);
+
+            // Auto-select first question in feed if none selected
+            if (data.questions.length > 0) {
+              const stillExists = selectedQuestion && data.questions.some(q => q.question_number === selectedQuestion.question_number);
+              if (!stillExists) {
+                setSelectedQuestion(data.questions[0]);
+                setChatHistory([]);
+              }
+            } else {
+              setSelectedQuestion(null);
+              setChatHistory([]);
+            }
+          } catch (e) {
+            console.error("Error loading questions feed:", e);
+            setLoading(false);
+            addToast("Failed to fetch questions", "error");
+          }
+        }, [selectedQuestion, selectedFilters, addToast]);
+
+        React.useEffect(() => {
+          fetchFilters();
+          fetchQuestions(1, {
+            subject: "",
+            chapter: "",
+            topic: "",
+            difficulty: "",
+            year: "",
+            exam_type: "",
+            search: ""
+          });
+        }, []);
+
+        const setFilter = (key, value) => {
+          setSelectedFilters((prev) => {
+            const updated = { ...prev, [key]: value };
+            if (key === "subject") {
+              updated.chapter = "";
+              updated.topic = "";
+            }
+            fetchQuestions(1, updated);
+            return updated;
+          });
+        };
+
+        const resetFilters = () => {
+          const cleared = {
+            subject: "",
+            chapter: "",
+            topic: "",
+            difficulty: "",
+            year: "",
+            exam_type: "",
+            search: ""
+          };
+          setSelectedFilters(cleared);
+          addToast("Filters reset successfully", "info");
+          fetchQuestions(1, cleared);
+        };
+
+        const selectQuestion = (q) => {
+          setSelectedQuestion(q);
+          setChatHistory([]);
+        };
+
+        const sendChatMessage = async (messageText) => {
+          if (!messageText.trim() || tutorTyping || !selectedQuestion) return;
+
+          const userMsg = { role: "user", content: messageText };
+          const updatedHistory = [...chatHistory, userMsg];
+          
+          const tutorMsgPlaceholder = { role: "assistant", content: "" };
+          setChatHistory([...updatedHistory, tutorMsgPlaceholder]);
+          setTutorTyping(true);
+
+          try {
+            const response = await fetch("/api/chat", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                question_text: selectedQuestion.raw_text,
+                subject: selectedQuestion.subject,
+                chapter: selectedQuestion.chapter,
+                topic: selectedQuestion.topic,
+                difficulty: selectedQuestion.difficulty,
+                chat_history: chatHistory,
+                message: messageText
+              })
+            });
+
+            if (!response.body) {
+              throw new Error("ReadableStream not supported on response");
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let buffer = "";
+
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split("\n\n");
+              buffer = lines.pop() || "";
+
+              for (const line of lines) {
+                if (line.trim().startsWith("data: ")) {
+                  try {
+                    const data = JSON.parse(line.trim().substring(6));
+                    if (data.text) {
+                      setChatHistory((prev) => {
+                        const history = [...prev];
+                        const lastIndex = history.length - 1;
+                        if (lastIndex >= 0 && history[lastIndex].role === "assistant") {
+                          history[lastIndex] = {
+                            ...history[lastIndex],
+                            content: history[lastIndex].content + data.text
+                          };
+                        }
+                        return history;
+                      });
+                    }
+                  } catch (err) {
+                    console.error("Failed to parse SSE JSON chunk:", err);
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            console.error("Error in chat streaming:", e);
+            addToast("Error communicating with AI Tutor", "error");
+            setChatHistory((prev) => {
+              const history = [...prev];
+              const lastIndex = history.length - 1;
+              if (lastIndex >= 0 && history[lastIndex].role === "assistant") {
+                history[lastIndex] = {
+                  ...history[lastIndex],
+                  content: "⚠️ Sorry, there was an error communicating with the AI Tutor. Please try again."
+                };
+              }
+              return history;
+            });
+          } finally {
+            setTutorTyping(false);
+          }
+        };
+
+        const resetChat = () => {
+          setChatHistory([]);
+          addToast("Chat cleared", "info");
+        };
+
+        const counts = filters.subject_counts || {};
+        const physicsCount = counts["Physics"] || 0;
+        const chemistryCount = counts["Chemistry"] || 0;
+        const mathCount = counts["Mathematics"] || 0;
+
+        return (
+          <div className="app-container">
+            {tutorTyping && (
+              <div className="top-progress-container">
+                <div className="top-progress-bar"></div>
+              </div>
+            )}
+
+            <header className="glass-header">
+              <div className="brand-wrapper">
+                <GraduationCap size={26} style={{ color: "var(--accent)" }} />
+                <h1 className="gradient-logo">JEE Tutor</h1>
+              </div>
+
+              <div className="live-stats-bar">
+                <div className="stat-chip">
+                  <BookOpen size={12} />
+                  <span>Corpus: <strong>{totalQuestions || 0}</strong></span>
+                </div>
+                <div className="stat-chip physics">
+                  <span style={{ width: 6, height: 6, background: "var(--physics)", borderRadius: "50%" }}></span>
+                  <span>Physics: <strong>{physicsCount}</strong></span>
+                </div>
+                <div className="stat-chip chemistry">
+                  <span style={{ width: 6, height: 6, background: "var(--chemistry)", borderRadius: "50%" }}></span>
+                  <span>Chemistry: <strong>{chemistryCount}</strong></span>
+                </div>
+                <div className="stat-chip mathematics">
+                  <span style={{ width: 6, height: 6, background: "var(--mathematics)", borderRadius: "50%" }}></span>
+                  <span>Maths: <strong>{mathCount}</strong></span>
+                </div>
+              </div>
+            </header>
+
+            <div className="app-grid-body">
+              <FilterSidebar
+                filters={filters}
+                selectedFilters={selectedFilters}
+                setFilter={setFilter}
+                resetFilters={resetFilters}
+              />
+
+              <QuestionList
+                questions={questions}
+                totalQuestions={totalQuestions}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                loading={loading}
+                selectedQuestion={selectedQuestion}
+                fetchQuestions={fetchQuestions}
+                selectQuestion={selectQuestion}
+              />
+
+              <QuestionDetail
+                selectedQuestion={selectedQuestion}
+                chatHistory={chatHistory}
+                toggleChat={(isOpen) => setIsChatOpen(isOpen)}
+              />
+            </div>
+
+            <TutorChat
+              selectedQuestion={selectedQuestion}
+              chatHistory={chatHistory}
+              tutorTyping={tutorTyping}
+              isChatOpen={isChatOpen}
+              sendChatMessage={sendChatMessage}
+              resetChat={resetChat}
+              toggleChat={(isOpen) => setIsChatOpen(isOpen)}
+            />
+
+            <ToastContainer toasts={toasts} removeToast={removeToast} />
+          </div>
+        );
+      };
+
+      // Render the App
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+
+    </script>
+  </body>
+</html>

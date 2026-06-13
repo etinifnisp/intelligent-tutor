@@ -1,0 +1,655 @@
+{
+  "status": "success",
+  "timestamp": "2026-05-26T20:20:25.442450",
+  "years_analyzed": 10,
+  "top_chapters_jee_main": [
+    {
+      "chapter": "Chemistry - General",
+      "count": 1377,
+      "marks_weighted": 5508
+    },
+    {
+      "chapter": "Physics - General",
+      "count": 1196,
+      "marks_weighted": 4784
+    },
+    {
+      "chapter": "Physics - Mechanics",
+      "count": 888,
+      "marks_weighted": 3552
+    },
+    {
+      "chapter": "Mathematics - Others",
+      "count": 854,
+      "marks_weighted": 3416
+    },
+    {
+      "chapter": "Physics - Electricity",
+      "count": 630,
+      "marks_weighted": 2520
+    },
+    {
+      "chapter": "Chemistry - Physical",
+      "count": 396,
+      "marks_weighted": 1584
+    },
+    {
+      "chapter": "Chemistry - Organic",
+      "count": 223,
+      "marks_weighted": 892
+    },
+    {
+      "chapter": "Mathematics - Coordinate",
+      "count": 151,
+      "marks_weighted": 604
+    },
+    {
+      "chapter": "Physics - Thermal",
+      "count": 105,
+      "marks_weighted": 420
+    },
+    {
+      "chapter": "Mathematics - Algebra",
+      "count": 101,
+      "marks_weighted": 404
+    },
+    {
+      "chapter": "Mathematics - Calculus",
+      "count": 100,
+      "marks_weighted": 400
+    },
+    {
+      "chapter": "Chemistry - Inorganic",
+      "count": 74,
+      "marks_weighted": 296
+    },
+    {
+      "chapter": "Physics - Optics",
+      "count": 43,
+      "marks_weighted": 172
+    },
+    {
+      "chapter": "Physics - Modern",
+      "count": 38,
+      "marks_weighted": 152
+    }
+  ],
+  "top_chapters_jee_advanced": [
+    {
+      "chapter": "Physics - Mechanics",
+      "count": 88,
+      "marks_weighted": 352
+    },
+    {
+      "chapter": "Physics - General",
+      "count": 76,
+      "marks_weighted": 304
+    },
+    {
+      "chapter": "Chemistry - Physical",
+      "count": 42,
+      "marks_weighted": 168
+    },
+    {
+      "chapter": "Chemistry - General",
+      "count": 37,
+      "marks_weighted": 148
+    },
+    {
+      "chapter": "Mathematics - Others",
+      "count": 35,
+      "marks_weighted": 140
+    },
+    {
+      "chapter": "Chemistry - Organic",
+      "count": 29,
+      "marks_weighted": 116
+    },
+    {
+      "chapter": "Mathematics - Algebra",
+      "count": 24,
+      "marks_weighted": 96
+    },
+    {
+      "chapter": "Physics - Electricity",
+      "count": 20,
+      "marks_weighted": 80
+    },
+    {
+      "chapter": "Mathematics - Coordinate",
+      "count": 18,
+      "marks_weighted": 72
+    },
+    {
+      "chapter": "Physics - Thermal",
+      "count": 11,
+      "marks_weighted": 44
+    },
+    {
+      "chapter": "Chemistry - Inorganic",
+      "count": 8,
+      "marks_weighted": 32
+    },
+    {
+      "chapter": "Physics - Optics",
+      "count": 2,
+      "marks_weighted": 8
+    },
+    {
+      "chapter": "Mathematics - Calculus",
+      "count": 1,
+      "marks_weighted": 4
+    }
+  ],
+  "rising_frequency_trends": [
+    {
+      "exam": "JEE_MAIN",
+      "chapter": "Chemistry - General",
+      "avg_prior": 174.33,
+      "avg_late": 278.0,
+      "increase_ratio": 1.59
+    },
+    {
+      "exam": "JEE_MAIN",
+      "chapter": "Chemistry - Organic",
+      "avg_prior": 27.33,
+      "avg_late": 45.33,
+      "increase_ratio": 1.66
+    },
+    {
+      "exam": "JEE_MAIN",
+      "chapter": "Chemistry - Inorganic",
+      "avg_prior": 6.67,
+      "avg_late": 17.0,
+      "increase_ratio": 2.55
+    },
+    {
+      "exam": "JEE_MAIN",
+      "chapter": "Mathematics - Others",
+      "avg_prior": 39.0,
+      "avg_late": 209.67,
+      "increase_ratio": 5.38
+    },
+    {
+      "exam": "JEE_MAIN",
+      "chapter": "Mathematics - Coordinate",
+      "avg_prior": 12.33,
+      "avg_late": 29.33,
+      "increase_ratio": 2.38
+    },
+    {
+      "exam": "JEE_MAIN",
+      "chapter": "Physics - Thermal",
+      "avg_prior": 12.67,
+      "avg_late": 20.33,
+      "increase_ratio": 1.61
+    },
+    {
+      "exam": "JEE_MAIN",
+      "chapter": "Physics - Optics",
+      "avg_prior": 1.67,
+      "avg_late": 12.67,
+      "increase_ratio": 7.6
+    },
+    {
+      "exam": "JEE_MAIN",
+      "chapter": "Physics - Modern",
+      "avg_prior": 2.67,
+      "avg_late": 10.0,
+      "increase_ratio": 3.75
+    },
+    {
+      "exam": "JEE_ADVANCED",
+      "chapter": "Mathematics - Others",
+      "avg_prior": 2.0,
+      "avg_late": 5.0,
+      "increase_ratio": 2.5
+    },
+    {
+      "exam": "JEE_ADVANCED",
+      "chapter": "Mathematics - Coordinate",
+      "avg_prior": 1.67,
+      "avg_late": 3.33,
+      "increase_ratio": 2.0
+    },
+    {
+      "exam": "JEE_ADVANCED",
+      "chapter": "Physics - Mechanics",
+      "avg_prior": 10.0,
+      "avg_late": 12.0,
+      "increase_ratio": 1.2
+    },
+    {
+      "exam": "JEE_ADVANCED",
+      "chapter": "Chemistry - Inorganic",
+      "avg_prior": 0.33,
+      "avg_late": 2.0,
+      "increase_ratio": 6.0
+    },
+    {
+      "exam": "JEE_ADVANCED",
+      "chapter": "Chemistry - Physical",
+      "avg_prior": 3.67,
+      "avg_late": 8.0,
+      "increase_ratio": 2.18
+    },
+    {
+      "exam": "JEE_ADVANCED",
+      "chapter": "Chemistry - Organic",
+      "avg_prior": 3.33,
+      "avg_late": 4.0,
+      "increase_ratio": 1.2
+    },
+    {
+      "exam": "JEE_ADVANCED",
+      "chapter": "Chemistry - General",
+      "avg_prior": 4.0,
+      "avg_late": 5.0,
+      "increase_ratio": 1.25
+    }
+  ],
+  "repeating_structural_patterns": [
+    {
+      "subject": "Physics",
+      "chapter": "Mechanics",
+      "topic": "NLM & Friction",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 10
+    },
+    {
+      "subject": "Physics",
+      "chapter": "General",
+      "topic": "General Concepts",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 10
+    },
+    {
+      "subject": "Physics",
+      "chapter": "Electricity",
+      "topic": "Current Electricity",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 10
+    },
+    {
+      "subject": "Physics",
+      "chapter": "Mechanics",
+      "topic": "Kinematics",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 10
+    },
+    {
+      "subject": "Chemistry",
+      "chapter": "General",
+      "topic": "General Concepts",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 10
+    },
+    {
+      "subject": "Chemistry",
+      "chapter": "Physical",
+      "topic": "Solutions",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 10
+    },
+    {
+      "subject": "Chemistry",
+      "chapter": "Organic",
+      "topic": "Hydrocarbons",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 9
+    },
+    {
+      "subject": "Chemistry",
+      "chapter": "Inorganic",
+      "topic": "Chemical Bonding",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2018,
+        2019,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 7
+    },
+    {
+      "subject": "Mathematics",
+      "chapter": "Others",
+      "topic": "Probability",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 10
+    },
+    {
+      "subject": "Mathematics",
+      "chapter": "Algebra",
+      "topic": "Progressions",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2017,
+        2019,
+        2020,
+        2021,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 7
+    },
+    {
+      "subject": "Mathematics",
+      "chapter": "Coordinate",
+      "topic": "Circles & Conics",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 9
+    },
+    {
+      "subject": "Physics",
+      "chapter": "Electricity",
+      "topic": "Electrostatics & Capacitance",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2016,
+        2017,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 9
+    },
+    {
+      "subject": "Physics",
+      "chapter": "Thermal",
+      "topic": "Thermodynamics",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2016,
+        2017,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 9
+    },
+    {
+      "subject": "Physics",
+      "chapter": "Optics",
+      "topic": "Ray Optics",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2018,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 6
+    },
+    {
+      "subject": "Mathematics",
+      "chapter": "Coordinate",
+      "topic": "Vectors & 3D Geometry",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2017,
+        2019,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 7
+    },
+    {
+      "subject": "Mathematics",
+      "chapter": "Algebra",
+      "topic": "Matrices & Determinants",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 9
+    },
+    {
+      "subject": "Physics",
+      "chapter": "Modern",
+      "topic": "Photoelectric Effect",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2020,
+        2021,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 5
+    },
+    {
+      "subject": "Chemistry",
+      "chapter": "Physical",
+      "topic": "Chemical Kinetics",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 9
+    },
+    {
+      "subject": "Physics",
+      "chapter": "Mechanics",
+      "topic": "Rotational Motion",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 8
+    },
+    {
+      "subject": "Mathematics",
+      "chapter": "Calculus",
+      "topic": "Integration",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 9
+    },
+    {
+      "subject": "Chemistry",
+      "chapter": "Inorganic",
+      "topic": "Coordination Compounds",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2023,
+        2024,
+        2025
+      ],
+      "frequency": 3
+    },
+    {
+      "subject": "Chemistry",
+      "chapter": "Organic",
+      "topic": "Isomerism",
+      "question_type": "MCQ-single",
+      "years_active": [
+        2021,
+        2024,
+        2025
+      ],
+      "frequency": 3
+    },
+    {
+      "subject": "Chemistry",
+      "chapter": "Physical",
+      "topic": "Solutions",
+      "question_type": "Integer",
+      "years_active": [
+        2021,
+        2022,
+        2024
+      ],
+      "frequency": 3
+    },
+    {
+      "subject": "Chemistry",
+      "chapter": "General",
+      "topic": "General Concepts",
+      "question_type": "Integer",
+      "years_active": [
+        2021,
+        2022,
+        2023
+      ],
+      "frequency": 3
+    }
+  ],
+  "difficulty_shifts_upward": []
+}
