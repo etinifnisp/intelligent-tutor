@@ -1936,7 +1936,7 @@
         );
       };
 
-      // ==========================================
+// ==========================================
       // Main App Layout Core Wrapper
       // ==========================================
       
@@ -1967,6 +1967,7 @@
         const [tutorTyping, setTutorTyping] = React.useState(false);
         const [isChatOpen, setIsChatOpen] = React.useState(false);
         const [toasts, setToasts] = React.useState([]);
+        const wsRef = React.useRef(null);
 
         // Toast Actions
         const addToast = React.useCallback((message, type = "info") => {
@@ -1993,58 +1994,81 @@
           }
         };
 
-        // Fetch Questions Feed
-        const fetchQuestions = React.useCallback(async (page = 1, currentFilters = selectedFilters) => {
+        // Fetch Questions via WebSocket
+        const fetchQuestions = React.useCallback((page = 1, currentFilters = selectedFilters) => {
+          if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
           setLoading(true);
-          setCurrentPage(page);
-
-          const params = new URLSearchParams({
-            page: page.toString(),
-            limit: "12" // Display 12 cards for layouts spacing
-          });
-
-          Object.entries(currentFilters).forEach(([key, val]) => {
-            if (val) params.append(key, val.toString());
-          });
-
-          try {
-            const res = await fetch(`/api/questions?${params.toString()}`);
-            const data = await res.json();
-            
-            setQuestions(data.questions);
-            setTotalQuestions(data.total);
-            setTotalPages(data.pages);
-            setLoading(false);
-
-            // Auto-select first question in feed if none selected
-            if (data.questions.length > 0) {
-              const stillExists = selectedQuestion && data.questions.some(q => q.question_number === selectedQuestion.question_number);
-              if (!stillExists) {
-                setSelectedQuestion(data.questions[0]);
-                setChatHistory([]);
-              }
-            } else {
-              setSelectedQuestion(null);
-              setChatHistory([]);
-            }
-          } catch (e) {
-            console.error("Error loading questions feed:", e);
-            setLoading(false);
-            addToast("Failed to fetch questions", "error");
-          }
-        }, [selectedQuestion, selectedFilters, addToast]);
+          wsRef.current.send(JSON.stringify({
+            type: "get_questions",
+            page,
+            page_size: 12,
+            filters: currentFilters,
+          }));
+        }, [selectedFilters]);
 
         React.useEffect(() => {
           fetchFilters();
-          fetchQuestions(1, {
-            subject: "",
-            chapter: "",
-            topic: "",
-            difficulty: "",
-            year: "",
-            exam_type: "",
-            search: ""
-          });
+
+          const ws = new WebSocket(`ws://localhost:8000/ws/session-${Date.now()}`);
+          wsRef.current = ws;
+
+          ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+
+            if (msg.type === "questions_result") {
+              const data = msg.data;
+              setQuestions(data.questions);
+              setTotalQuestions(data.total);
+              setTotalPages(data.pages);
+              setCurrentPage(data.page);
+              setLoading(false);
+
+              if (data.questions.length > 0) {
+                setSelectedQuestion((prev) => {
+                  const stillExists = prev && data.questions.some(q => q.question_number === prev.question_number);
+                  if (!stillExists) {
+                    setChatHistory([]);
+                    return data.questions[0];
+                  }
+                  return prev;
+                });
+              } else {
+                setSelectedQuestion(null);
+                setChatHistory([]);
+              }
+            }
+
+            if (msg.type === "chat_token") {
+              setChatHistory((prev) => {
+                const history = [...prev];
+                const lastIndex = history.length - 1;
+                if (lastIndex >= 0 && history[lastIndex].role === "assistant") {
+                  history[lastIndex] = { ...history[lastIndex], content: history[lastIndex].content + msg.text };
+                }
+                return history;
+              });
+            }
+
+            if (msg.type === "chat_done") {
+              setTutorTyping(false);
+            }
+
+            if (msg.type === "error") {
+              addToast(msg.message || "WebSocket error", "error");
+              setLoading(false);
+              setTutorTyping(false);
+            }
+          };
+
+          ws.onopen = () => {
+            fetchQuestions(1, {
+              subject: "", chapter: "", topic: "", difficulty: "", year: "", exam_type: "", search: ""
+            });
+          };
+
+          ws.onerror = () => addToast("WebSocket connection error", "error");
+
+          return () => ws.close();
         }, []);
 
         const setFilter = (key, value) => {
@@ -2079,89 +2103,27 @@
           setChatHistory([]);
         };
 
-        const sendChatMessage = async (messageText) => {
+        // Send chat message via WebSocket
+        const sendChatMessage = (messageText) => {
           if (!messageText.trim() || tutorTyping || !selectedQuestion) return;
+          if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+            addToast("Connection not ready", "error");
+            return;
+          }
 
           const userMsg = { role: "user", content: messageText };
-          const updatedHistory = [...chatHistory, userMsg];
-          
-          const tutorMsgPlaceholder = { role: "assistant", content: "" };
-          setChatHistory([...updatedHistory, tutorMsgPlaceholder]);
+          setChatHistory((prev) => [...prev, userMsg, { role: "assistant", content: "" }]);
           setTutorTyping(true);
 
-          try {
-            const response = await fetch("/api/chat", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify({
-                question_text: selectedQuestion.raw_text,
-                subject: selectedQuestion.subject,
-                chapter: selectedQuestion.chapter,
-                topic: selectedQuestion.topic,
-                difficulty: selectedQuestion.difficulty,
-                chat_history: chatHistory,
-                message: messageText
-              })
-            });
-
-            if (!response.body) {
-              throw new Error("ReadableStream not supported on response");
-            }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder("utf-8");
-            let buffer = "";
-
-            while (true) {
-              const { value, done } = await reader.read();
-              if (done) break;
-
-              buffer += decoder.decode(value, { stream: true });
-              const lines = buffer.split("\n\n");
-              buffer = lines.pop() || "";
-
-              for (const line of lines) {
-                if (line.trim().startsWith("data: ")) {
-                  try {
-                    const data = JSON.parse(line.trim().substring(6));
-                    if (data.text) {
-                      setChatHistory((prev) => {
-                        const history = [...prev];
-                        const lastIndex = history.length - 1;
-                        if (lastIndex >= 0 && history[lastIndex].role === "assistant") {
-                          history[lastIndex] = {
-                            ...history[lastIndex],
-                            content: history[lastIndex].content + data.text
-                          };
-                        }
-                        return history;
-                      });
-                    }
-                  } catch (err) {
-                    console.error("Failed to parse SSE JSON chunk:", err);
-                  }
-                }
-              }
-            }
-          } catch (e) {
-            console.error("Error in chat streaming:", e);
-            addToast("Error communicating with AI Tutor", "error");
-            setChatHistory((prev) => {
-              const history = [...prev];
-              const lastIndex = history.length - 1;
-              if (lastIndex >= 0 && history[lastIndex].role === "assistant") {
-                history[lastIndex] = {
-                  ...history[lastIndex],
-                  content: "⚠️ Sorry, there was an error communicating with the AI Tutor. Please try again."
-                };
-              }
-              return history;
-            });
-          } finally {
-            setTutorTyping(false);
-          }
+          wsRef.current.send(JSON.stringify({
+            type: "tutor_chat",
+            data: {
+              question_id: String(selectedQuestion.question_number || selectedQuestion.id),
+              context_text: selectedQuestion.raw_text,
+              student_message: messageText,
+              chat_history: chatHistory,
+            },
+          }));
         };
 
         const resetChat = () => {
