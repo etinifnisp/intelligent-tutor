@@ -1,10 +1,15 @@
-import os, json, asyncio
+import os
+import json
+import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from google import genai
 from google.genai import types
+
+# Import Layer 3 Manager
+from graph import KnowledgeGraphManager
 
 app = FastAPI(title="JEE Intelligent Tutor API")
 
@@ -16,90 +21,73 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static/images", StaticFiles(directory="static/images"), name="images")
+# Global in-memory data array
+QUESTIONS_RAM = []
 
-client = genai.Client()
+def load_questions_into_ram():
+    """Boot Sequence Phase 1: Loads all questions into system RAM."""
+    global QUESTIONS_RAM
+    # Look for files either inside backend/ or from root relative paths
+    paths_to_check = ["jee_corpus.json", "../jee_corpus.json"]
+    target_path = None
+    
+    for p in paths_to_check:
+        if os.path.exists(p):
+            target_path = p
+            break
 
-PIPELINE_STEPS = {"retrieval": True, "tutor": True, "memory_assessor": True}
+    if target_path:
+        try:
+            with open(target_path, "r") as f:
+                QUESTIONS_RAM = json.load(f)
+            print(f"📦 Successfully loaded {len(QUESTIONS_RAM)} questions directly into RAM.")
+        except Exception as e:
+            print(f"❌ Failure parsing corpus json file: {e}")
+            QUESTIONS_RAM = []
+    else:
+        print("⚠️ Corpus file 'jee_corpus.json' not discovered. Setting up fallback stubs.")
+        QUESTIONS_RAM = [
+            {"question_number": 1, "subject": "Physics", "chapter": "Kinematics", "difficulty": "Easy", "raw_text": "Calculate velocity..."},
+            {"question_number": 2, "subject": "Physics", "chapter": "Newton's Laws", "difficulty": "Medium", "raw_text": "Find net force..."}
+        ]
 
-# ---- Task 6-7: no in-memory load of 6,567 questions at boot ----
-# Replace with a real DB connection (sqlite/postgres). Stub shown below.
-import sqlite3
-DB_PATH = "questions.db"
-
-def get_questions_paginated(page=1, page_size=12, filters=None):
+def get_questions_filtered(page=1, page_size=12, filters=None):
+    """Filters dataset arrays instantly in RAM."""
     filters = filters or {}
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
+    filtered = QUESTIONS_RAM
 
-    where, params = [], []
-    for key in ("subject", "chapter", "exam_type", "difficulty", "year"):
+    for key in ("subject", "chapter", "difficulty"):
         if filters.get(key):
-            where.append(f"{key} = ?")
-            params.append(filters[key])
-    if filters.get("topic"):
-        where.append("topic = ?")
-        params.append(filters["topic"])
+            filtered = [q for q in filtered if str(q.get(key)).lower() == str(filters[key]).lower()]
+            
     if filters.get("search"):
-        where.append("raw_text LIKE ?")
-        params.append(f"%{filters['search']}%")
+        search_term = filters["search"].lower()
+        filtered = [q for q in filtered if search_term in str(q.get("raw_text", "")).lower()]
 
-    where_clause = f"WHERE {' AND '.join(where)}" if where else ""
-
-    total = cur.execute(f"SELECT COUNT(*) FROM questions {where_clause}", params).fetchone()[0]
-
+    total = len(filtered)
     offset = (page - 1) * page_size
-    rows = cur.execute(
-        f"SELECT * FROM questions {where_clause} LIMIT ? OFFSET ?",
-        params + [page_size, offset]
-    ).fetchall()
-    conn.close()
+    paginated_slice = filtered[offset : offset + page_size]
 
     return {
-        "questions": [dict(r) for r in rows],
+        "questions": paginated_slice,
         "total": total,
         "pages": max(1, (total + page_size - 1) // page_size),
         "page": page,
     }
 
-
-# ---- Task 6: Redis cache (TTL 1hr) on filter-combination results ----
-try:
-    import redis
-    redis_client = redis.Redis(host="localhost", port=6379, decode_responses=True)
-except Exception:
-    redis_client = None
-
-CACHE_TTL = 3600
-
-def cache_key(page, page_size, filters):
-    return "q:" + json.dumps({"page": page, "page_size": page_size, **(filters or {})}, sort_keys=True)
-
-def get_questions_cached(page=1, page_size=12, filters=None):
-    key = cache_key(page, page_size, filters)
-    if redis_client:
-        cached = redis_client.get(key)
-        if cached:
-            return json.loads(cached)
-    result = get_questions_paginated(page, page_size, filters)
-    if redis_client:
-        redis_client.setex(key, CACHE_TTL, json.dumps(result))
-    return result
-
-
 @app.on_event("startup")
-async def warm_cache():
-    """Task 6: warm top-50 most-attempted questions at boot only.
-    Boot time target < 5s — no full corpus load."""
-    if redis_client:
-        try:
-            get_questions_cached(page=1, page_size=50, filters={})
-        except Exception as e:
-            print(f"Cache warm skipped: {e}")
+async def boot_sequence():
+    """Orchestrated single-thread boot parameters."""
+    print("🚀 Initiating tutor backend system boot sequence...")
+    load_questions_into_ram()
+    
+    app.state.graph = KnowledgeGraphManager()
+    if QUESTIONS_RAM:
+        app.state.graph.link_questions(QUESTIONS_RAM)
+        
+    print("✅ System boot sequence completed successfully. Ready for incoming connections.")
 
 
-# ---- WebSocket message handling (Task 4-5) ----
 class ChatRequest(BaseModel):
     question_id: str
     context_text: str
@@ -115,11 +103,6 @@ class MemoryAssessorAgent:
         if self.graph is None:
             return
         learner_state = self.graph.get_learner_memory(session_id)
-        mastery = learner_state.get("mastery", {})
-        misconceptions = learner_state.get("misconceptions", {})
-
-        learner_state["mastery"] = mastery
-        learner_state["misconceptions"] = misconceptions
         learner_state.setdefault("session_history", []).append({
             "question_id": question_id,
             "student_message": student_message,
@@ -128,23 +111,52 @@ class MemoryAssessorAgent:
         self.graph.write_learner_memory(session_id, learner_state)
 
 
-async def run_pipeline_ws(payload: ChatRequest, session_id: str, graph, websocket: WebSocket):
-    """Streams tokens directly over websocket.send_text() instead of SSE."""
-    retrieved_context = payload.context_text
-    if PIPELINE_STEPS.get("retrieval", True):
-        retrieved_context = payload.context_text  # placeholder
+async def classify_intent(student_message: str) -> str:
+    """Evaluates student inputs using structured schemas to determine the execution path."""
+    direct_keywords = {"hello", "hi", "hey", "thanks", "thank you", "cool", "ok", "bye"}
+    if student_message.strip().lower() in direct_keywords:
+        return "DIRECT"
 
-    full_prompt = (
-        f"Context Question: {retrieved_context}\n"
-        f"Student Input: {payload.student_message}"
-    )
-    socratic_instruction = (
-        "You are a Socratic JEE Tutor. Guide the student step-by-step. "
-        "Never give the solution directly. Use LaTeX formatting for equations."
-    )
+    try:
+        classifier_client = genai.Client()
+        prompt = (
+            f"Analyze the intent of this student query regarding JEE preparation:\n"
+            f"\"{student_message}\"\n\n"
+            f"Classify it as either:\n"
+            f"- 'PIPELINE': If they want a problem solved, want a conceptual explanation, need a hint, or are beginning a new topic study.\n"
+            f"- 'DIRECT': If they are asking for confirmation on a final answer choice, basic follow-up clarity about something you just stated, or standard conversation."
+        )
+        
+        response = classifier_client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema={
+                    "type": "OBJECT",
+                    "properties": {
+                        "intent": {"type": "STRING", "enum": ["PIPELINE", "DIRECT"]}
+                    },
+                    "required": ["intent"]
+                },
+                temperature=0.1,
+            )
+        )
+        result = json.loads(response.text)
+        return result.get("intent", "PIPELINE")
+    except Exception as e:
+        print(f"⚠️ Intent classification failed ({e}). Defaulting to PIPELINE.")
+        return "PIPELINE"
+
+
+async def run_pipeline_ws(payload: ChatRequest, session_id: str, graph, websocket: WebSocket):
+    """The deep reasoning path: handles problem solving, hints, and conceptual explanations."""
+    client = genai.Client()
+    full_prompt = f"Context Material: {payload.context_text}\nStudent Input: {payload.student_message}"
+    socratic_instruction = "You are a Socratic JEE Tutor. Guide step-by-step. Never give the solution directly. Use LaTeX formatting for equations."
 
     collected = []
-    if PIPELINE_STEPS.get("tutor", True):
+    try:
         response = client.models.generate_content_stream(
             model='gemini-2.5-flash',
             contents=full_prompt,
@@ -160,15 +172,50 @@ async def run_pipeline_ws(payload: ChatRequest, session_id: str, graph, websocke
                     "type": "chat_token",
                     "text": chunk.text,
                 }))
+    except Exception as e:
+        await websocket.send_text(json.dumps({"type": "error", "message": str(e)}))
+
+    await websocket.send_text(json.dumps({"type": "chat_done"}))
+    
+    tutor_response = "".join(collected)
+    MemoryAssessorAgent(graph).run(session_id, payload.question_id, payload.student_message, tutor_response)
+
+
+async def run_direct_ws(payload: ChatRequest, session_id: str, graph, websocket: WebSocket):
+    """Direct Path processing line. Skips complex file search RAG lookups."""
+    client = genai.Client()
+    learner_state = graph.get_learner_memory(session_id) if graph else {}
+    
+    full_prompt = f"Learner Profile State: {json.dumps(learner_state.get('mastery', {}))}\n"
+    if payload.chat_history:
+        full_prompt += f"Recent Exchanges: {json.dumps(payload.chat_history[-3:])}\n"
+    
+    # Clean, safe assignment without inline walrus errors
+    full_prompt += f"Student Input: {payload.student_message}"
+
+    system_instruction = "You are an empathetic conversational JEE Coach. Provide fast, targeted answers. Do not offer deep mini-lectures. Keep it clear."
+
+    try:
+        response = client.models.generate_content_stream(
+            model='gemini-2.5-flash',
+            contents=full_prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.6,
+            )
+        )
+        for chunk in response:
+            if chunk.text:
+                await websocket.send_text(json.dumps({
+                    "type": "chat_token",
+                    "text": chunk.text,
+                }))
+    except Exception as e:
+        await websocket.send_text(json.dumps({"type": "error", "message": str(e)}))
 
     await websocket.send_text(json.dumps({"type": "chat_done"}))
 
-    if PIPELINE_STEPS.get("memory_assessor", True):
-        tutor_response = "".join(collected)
-        MemoryAssessorAgent(graph).run(session_id, payload.question_id, payload.student_message, tutor_response)
 
-
-# ---- Task 4-5: single /ws/{session_id} route for all message types ----
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
     await websocket.accept()
@@ -181,7 +228,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             msg_type = msg.get("type")
 
             if msg_type == "get_questions":
-                result = get_questions_cached(
+                result = get_questions_filtered(
                     page=msg.get("page", 1),
                     page_size=msg.get("page_size", 12),
                     filters=msg.get("filters", {}),
@@ -193,31 +240,24 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
 
             elif msg_type == "tutor_chat":
                 payload = ChatRequest(**msg["data"])
-                await run_pipeline_ws(payload, session_id, graph, websocket)
+                intent = await classify_intent(payload.student_message)
+                print(f"◇ Intent classified: {intent}")
+                
+                if intent == "PIPELINE":
+                    await run_pipeline_ws(payload, session_id, graph, websocket)
+                else:
+                    await run_direct_ws(payload, session_id, graph, websocket)
 
             elif msg_type == "get_graph":
                 graph_data = graph.export_subgraph() if graph else {}
-                await websocket.send_text(json.dumps({
-                    "type": "graph_result",
-                    "data": graph_data,
-                }))
+                await websocket.send_text(json.dumps({"type": "graph_result", "data": graph_data}))
 
             elif msg_type == "get_memory":
                 learner_state = graph.get_learner_memory(session_id) if graph else {}
-                await websocket.send_text(json.dumps({
-                    "type": "memory_result",
-                    "data": learner_state,
-                }))
-
-            else:
-                await websocket.send_text(json.dumps({
-                    "type": "error",
-                    "message": f"Unknown message type: {msg_type}",
-                }))
+                await websocket.send_text(json.dumps({"type": "memory_result", "data": learner_state}))
 
     except WebSocketDisconnect:
-        pass
-
+        print(f"🔌 Session {session_id} disconnected.")
 
 if __name__ == "__main__":
     import uvicorn
