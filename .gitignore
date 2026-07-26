@@ -3,3 +3,10 @@ jee_research/logs/*.log
 jee_research/logs/*.txt 
 jee_research/logs/mech_sample.txt 
 jee_research/.venv/ 
+
+# Added ignores
+*.log
+*.zip
+frontend_backup/
+graph_store.json
+learner_memory.json
