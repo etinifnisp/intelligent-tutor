@@ -7,6 +7,9 @@ export default function QuestionDisplay({
   practiceMode = false,
   revealAnswer = false,
   revealSolutionSteps = [],
+  selectedOption = '',
+  onSelectOption = null,
+  disabled = false,
 }) {
   if (!question) return null;
 
@@ -17,10 +20,15 @@ export default function QuestionDisplay({
 
   const images = getQuestionImages(question);
   const showAnswer = revealAnswer && parsed.correctAnswer;
+  const examLabel = question.exam_type?.replaceAll('_', ' ') || question.source?.exam?.replaceAll('_', ' ');
+  const sourceYear = question.year || question.source?.year;
 
   return (
     <div className={`question-display ${compact ? 'compact' : ''}`}>
       <div className="qd-meta">
+        {sourceYear && (
+          <span className="qd-source-badge"><i/>PYQ · {examLabel || 'JEE'} · {sourceYear}</span>
+        )}
         {question.subject && (
           <span className="badge" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
             {question.subject}
@@ -32,8 +40,8 @@ export default function QuestionDisplay({
             {question.difficulty}
           </span>
         )}
-        {question.year && (
-          <span className="qd-year">{question.year} {question.exam_type?.replace('_', ' ')}</span>
+        {question.shift && question.shift !== 'N/A' && (
+          <span className="qd-year">{question.shift.replaceAll('_', ' ')}</span>
         )}
         {practiceMode && !revealAnswer && (
           <span className="badge badge-practice">Answer hidden</span>
@@ -53,7 +61,8 @@ export default function QuestionDisplay({
         <div className="qd-images">
           {images.map((url, i) => (
             <figure key={url} className="qd-figure">
-              <img src={url} alt={`Diagram ${i + 1}`} className="qd-diagram" loading="lazy" />
+              <img src={url} alt={`Diagram ${i + 1}`} className="qd-diagram" loading="lazy"
+                onError={event => { event.currentTarget.closest('figure').hidden = true; }} />
               <figcaption>Figure {i + 1}</figcaption>
             </figure>
           ))}
@@ -62,15 +71,30 @@ export default function QuestionDisplay({
 
       {parsed.options.length > 0 && (
         <div className="qd-options" role="list" aria-label="Answer choices">
-          {parsed.options.map(opt => (
-            <div key={opt.label} className="qd-option" role="listitem">
-              <span className="qd-option-label">{opt.label}</span>
-              <span
-                className="qd-option-text"
-                dangerouslySetInnerHTML={renderMarkdown(opt.text)}
-              />
-            </div>
-          ))}
+          {parsed.options.map(opt => {
+            const isSelected = selectedOption === opt.label;
+            const isCorrect = revealAnswer && parsed.correctAnswer === opt.label;
+            const isIncorrect = revealAnswer && isSelected && !isCorrect;
+            const OptionTag = onSelectOption ? 'button' : 'div';
+            return (
+              <OptionTag
+                key={opt.label}
+                className={`qd-option ${isSelected ? 'selected' : ''} ${isCorrect ? 'correct' : ''} ${isIncorrect ? 'incorrect' : ''}`}
+                role={onSelectOption ? undefined : 'listitem'}
+                type={onSelectOption ? 'button' : undefined}
+                aria-pressed={onSelectOption ? isSelected : undefined}
+                disabled={onSelectOption ? disabled : undefined}
+                onClick={onSelectOption ? () => onSelectOption(opt.label) : undefined}
+              >
+                <span className="qd-option-label">{opt.label}</span>
+                <span
+                  className="qd-option-text"
+                  dangerouslySetInnerHTML={renderMarkdown(opt.text)}
+                />
+                {isCorrect && <span className="qd-option-result">Correct</span>}
+              </OptionTag>
+            );
+          })}
         </div>
       )}
 

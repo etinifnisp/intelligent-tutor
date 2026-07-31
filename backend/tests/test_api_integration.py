@@ -67,6 +67,22 @@ def test_questions_endpoint(client):
     assert isinstance(body["questions"], list)
 
 
+def test_practice_questions_endpoint_returns_clean_four_choice_pyqs(client):
+    res = client.get("/questions?practice_ready=true&limit=10")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["total_matches"] > 0
+    assert body["questions"]
+    for question in body["questions"]:
+        assert question["source"]["kind"] == "PYQ"
+        assert question["year"]
+        assert question["exam_type"]
+        assert question["stem_text"]
+        assert "raw_text" not in question
+        assert [option["label"] for option in question["options"]] == ["A", "B", "C", "D"]
+        assert all(option["text"].strip() for option in question["options"])
+
+
 def test_chapters_endpoint(client):
     res = client.get("/chapters")
     assert res.status_code == 200

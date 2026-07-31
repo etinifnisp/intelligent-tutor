@@ -6,8 +6,8 @@ const GREEK_MAP = {
   φ: '\\phi', ω: '\\omega', Δ: '\\Delta', Σ: '\\Sigma', Ω: '\\Omega',
 };
 
-const OPTION_LINE = /^\s*(?:\(([a-d1-4])\)|\[([A-D1-4])\]|([A-D1-4])[\).:])\s*(.+)$/i;
-const NUMERIC_OPTION = /^\s*\((\d)\)\s*(.+)$/;
+const CHOICE_LABELS = ['A', 'B', 'C', 'D'];
+const OPTION_LINE = /^\s*(?:\(([a-d1-4])\)|\[([a-d1-4])\]|([a-d1-4])[\).:])\s*(.*)$/i;
 
 export function resolveImageUrl(path) {
   if (!path) return null;
@@ -19,131 +19,114 @@ export function resolveImageUrl(path) {
 export function getQuestionImages(question) {
   const urls = [];
   for (const img of question.images || []) {
-    const u = resolveImageUrl(img);
-    if (u) urls.push(u);
+    const url = resolveImageUrl(img);
+    if (url) urls.push(url);
   }
-  for (const p of question.diagram_paths || []) {
-    const u = resolveImageUrl(p);
-    if (u) urls.push(u);
+  for (const path of question.diagram_paths || []) {
+    const url = resolveImageUrl(path);
+    if (url) urls.push(url);
   }
   return [...new Set(urls)];
 }
 
-function cleanStem(text) {
-  return text
-    .replace(/^Question:\s*/i, '')
-    .replace(/\bQ\.?\s*\d+\.?\s*/i, '')
+function normalizeLabel(value) {
+  const label = String(value || '').trim().toUpperCase();
+  return { 1: 'A', 2: 'B', 3: 'C', 4: 'D' }[label] || label;
+}
+
+function sanitizeOptions(options) {
+  const unique = new Map();
+  for (const option of options || []) {
+    if (!option || typeof option !== 'object') continue;
+    const label = normalizeLabel(option.label);
+    const text = String(option.text || '').replace(/\s+/g, ' ').trim();
+    if (CHOICE_LABELS.includes(label) && text && text !== ')' && !unique.has(label)) {
+      unique.set(label, { label, text });
+    }
+  }
+  return CHOICE_LABELS.every(label => unique.has(label))
+    ? CHOICE_LABELS.map(label => unique.get(label))
+    : [];
+}
+
+function parseOptionsFromText(raw) {
+  const header = raw.match(/\n\s*Options?\s*:\s*/i);
+  const source = header ? raw.slice(header.index + header[0].length) : raw;
+  const block = source.replace(/\n\s*(?:Answer|Ans\.?|Sol\.?|Solution)\s*:?\s*[\s\S]*$/i, '');
+  const options = [];
+  let current = null;
+
+  const flush = () => {
+    if (current) options.push(current);
+    current = null;
+  };
+
+  for (const line of block.split('\n')) {
+    const match = line.match(OPTION_LINE);
+    if (match) {
+      flush();
+      current = {
+        label: normalizeLabel(match[1] || match[2] || match[3]),
+        text: (match[4] || '').trim(),
+      };
+    } else if (current && line.trim()) {
+      current.text = `${current.text} ${line.trim()}`.trim();
+    }
+  }
+  flush();
+  return sanitizeOptions(options);
+}
+
+function cleanStem(text, hasChoices) {
+  let stem = String(text || '');
+  const sectionStart = stem.search(/\n\s*(?:Options?|Answer|Ans\.?|Sol\.?|Solution)\s*:/i);
+  if (sectionStart >= 0) stem = stem.slice(0, sectionStart);
+
+  if (hasChoices) {
+    const lines = stem.split('\n');
+    const firstChoice = lines.findIndex(line => OPTION_LINE.test(line));
+    if (firstChoice >= 0) stem = lines.slice(0, firstChoice).join('\n');
+  }
+
+  return stem
+    .replace(/^\s*(?:Question\s*:|Q\.?\s*\d+\s*[:.)-]?)\s*/i, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
-function parseOptionsFromText(raw) {
-  const options = [];
-  const optionsBlock = raw.match(/\nOptions?\s*:\s*([\s\S]*?)(?:\n(?:Answer|Ans\.?|Sol\.?|Solution)\s*:|$)/i);
-  const block = optionsBlock ? optionsBlock[1] : raw;
-  const lines = block.split('\n');
-
-  for (const line of lines) {
-    const m = line.match(OPTION_LINE);
-    const num = line.match(NUMERIC_OPTION);
-    if (m) {
-      const label = (m[1] || m[2] || m[3]).toUpperCase();
-      const text = (m[4] || '').trim();
-      if (!text || text === ')') continue;
-      const normalized = /^\d$/.test(label)
-        ? String.fromCharCode(64 + Number(label))
-        : label;
-      options.push({ label: normalized, text });
-    } else if (num) {
-      options.push({
-        label: String.fromCharCode(64 + Number(num[1])),
-        text: num[2].trim(),
-      });
-    }
-  }
-  return options;
-}
-
-function parseStructuredOptions(question) {
-  if (!Array.isArray(question.options)) return [];
-  return question.options
-    .filter(opt => opt?.text && opt.text.trim() && opt.text.trim() !== ')')
-    .map(opt => ({
-      label: String(opt.label || '').toUpperCase(),
-      text: opt.text.trim(),
-    }));
+function normalizeAnswer(answer) {
+  if (!answer) return null;
+  const match = String(answer).trim().match(/(?:\(([A-D1-4])\)|\[([A-D1-4])\]|([A-D1-4]))/i);
+  return match ? normalizeLabel(match[1] || match[2] || match[3]) : String(answer).trim();
 }
 
 export function parseQuestionContent(question, { includeAnswer = false, includeSolution = false } = {}) {
-  const raw = (
-    question.raw_text ||
-    question.stem_text ||
-    question.normalized_text ||
-    question.question_text ||
-    ''
+  const raw = String(
+    question.raw_text || question.normalized_text || question.question_text || question.stem_text || '',
   ).trim();
 
+  let options = sanitizeOptions(question.options);
+  if (options.length !== 4) options = parseOptionsFromText(raw);
+
+  const canonicalStem = options.length === 4 && question.stem_text
+    ? question.stem_text
+    : raw;
+  const stem = cleanStem(canonicalStem, options.length === 4);
+
   let correctAnswer = question.correct_answer || null;
+  if (!correctAnswer) {
+    const match = raw.match(/\n\s*(?:Answer|Ans\.?)\s*:?\s*([^\n]+)/i);
+    if (match) correctAnswer = match[1];
+  }
+  correctAnswer = normalizeAnswer(correctAnswer);
+
   let solution = question.official_solution || '';
-
-  const answerMatch = raw.match(/\n(?:Answer|Ans\.?)\s*:?\s*([^\n]+)/i);
-  if (answerMatch && !correctAnswer) {
-    correctAnswer = answerMatch[1].trim();
+  if (!solution) {
+    const match = raw.match(/\n\s*(?:Sol\.?|Solution)\s*:?\s*([\s\S]+)$/i);
+    if (match) solution = match[1].trim();
   }
-
-  const solMatch = raw.match(/\n(?:Sol\.?|Solution)\s*:?\s*([\s\S]+)$/i);
-  if (solMatch && !solution) {
-    solution = solMatch[1].trim();
-  }
-
-  let stem = raw;
-  if (!includeAnswer) {
-    stem = stem
-      .replace(/\n(?:Answer|Ans\.?)\s*:?[^\n]*[\s\S]*$/i, '')
-      .replace(/\n(?:Sol\.?|Solution)\s*:?[\s\S]*$/i, '')
-      .replace(/\nOptions?\s*:[\s\S]*$/i, '');
-  } else if (!includeSolution) {
-    stem = stem.replace(/\n(?:Sol\.?|Solution)\s*:?[\s\S]*$/i, '');
-  }
-
-  stem = cleanStem(stem);
-
-  let options = parseStructuredOptions(question);
-  if (options.length < 2) {
-    const fromText = parseOptionsFromText(raw);
-    if (fromText.length >= 2) options = fromText;
-  }
-
-  if (options.length < 2) {
-    const inline = [...stem.matchAll(/\(([1-4])\)/g)];
-    if (inline.length >= 2) {
-      const tail = stem.split(/\n/).slice(-6);
-      const numeric = tail
-        .map(l => l.match(NUMERIC_OPTION))
-        .filter(Boolean)
-        .map(m => ({
-          label: String.fromCharCode(64 + Number(m[1])),
-          text: m[2].trim(),
-        }));
-      if (numeric.length >= 2) options = numeric;
-    }
-  }
-
-  if (options.length >= 2) {
-    const optionPattern = new RegExp(
-      options.map(o => `\\(${o.label}\\)|\\(${o.label.toLowerCase()}\\)`).join('|'),
-      'g',
-    );
-    stem = stem.replace(optionPattern, '').replace(/\n{2,}/g, '\n').trim();
-  }
-
-  stem = stem.replace(/\n(\(\d\)\s*)+$/g, '').trim();
-
   const solutionSteps = solution
-    ? solution
-        .split(/\n+/)
-        .map(s => s.trim())
-        .filter(s => s.length > 2)
+    ? solution.split(/\n+/).map(step => step.trim()).filter(step => step.length > 2)
     : [];
 
   return {
@@ -157,7 +140,6 @@ export function parseQuestionContent(question, { includeAnswer = false, includeS
 
 export function prepareMathText(text) {
   if (!text) return '';
-
   let out = text;
 
   for (const [char, latex] of Object.entries(GREEK_MAP)) {
@@ -170,7 +152,6 @@ export function prepareMathText(text) {
   );
   out = out.replace(/;\s*\)/g, '<span class="math-placeholder">[symbol]</span>)');
   out = out.replace(/\s+;\s+(?=[).,])/g, ' <span class="math-placeholder">[symbol]</span> ');
-
   out = out.replace(
     /(?<![$\\])(\b[A-Za-z]{1,3})\s*\/\s*([A-Za-z0-9]{1,3}\b)/g,
     (_, a, b) => `$${a}/${b}$`,
@@ -179,15 +160,8 @@ export function prepareMathText(text) {
     /(?<![$\\])([A-Za-z])(\^[0-9]+|\^\{[^}]+\})/g,
     (_, base, exp) => `$${base}${exp}$`,
   );
-  out = out.replace(
-    /(?<![$\\])√\s*\(([^)]+)\)/g,
-    (_, inner) => `$\\sqrt{${inner}}$`,
-  );
-  out = out.replace(
-    /(?<![$\\])√\s*([A-Za-z0-9]+)/g,
-    (_, inner) => `$\\sqrt{${inner}}$`,
-  );
-
+  out = out.replace(/(?<![$\\])√\s*\(([^)]+)\)/g, (_, inner) => `$\\sqrt{${inner}}$`);
+  out = out.replace(/(?<![$\\])√\s*([A-Za-z0-9]+)/g, (_, inner) => `$\\sqrt{${inner}}$`);
   return out;
 }
 

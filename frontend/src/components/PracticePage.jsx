@@ -45,10 +45,10 @@ export default function PracticePage({ user }) {
   );
 
   const mcqOptions = useMemo(() => {
-    if (parsedQuestion?.options?.length >= 2) {
+    if (parsedQuestion?.options?.length === 4) {
       return parsedQuestion.options.map(o => o.label);
     }
-    return ['A', 'B', 'C', 'D'];
+    return [];
   }, [parsedQuestion]);
 
   const solutionStepIndices = useMemo(() => {
@@ -115,7 +115,7 @@ export default function PracticePage({ user }) {
       return;
     }
 
-    const params = new URLSearchParams({ limit: '50' });
+    const params = new URLSearchParams({ limit: '200', practice_ready: 'true' });
     if (subject) params.set('subject', subject);
     if (chapter) params.set('chapter', chapter);
     fetch(`${API}/questions?${params}`)
@@ -206,16 +206,19 @@ export default function PracticePage({ user }) {
 
   function selectOption(opt) {
     setAnswer(`option ${opt}`);
-    submitAnswer(`option ${opt}`);
+    setFeedback(null);
+    setTutorReply('');
   }
+
+  const selectedOption = answer.startsWith('option ') ? answer.slice(7) : '';
 
   return (
     <div id="page-practice" className="page active student-page">
       <header className="page-header">
         <div>
-          <h1>Practice</h1>
+          <h1>PYQ Practice</h1>
           <p className="page-subtitle">
-            {connected ? 'Connected to tutor' : 'Reconnecting…'}
+            {connected ? 'AI tutor connected' : 'Reconnecting…'}
             {timedMode && ` · ${Math.floor(timerSec / 60)}:${String(timerSec % 60).padStart(2, '0')}`}
           </p>
         </div>
@@ -231,9 +234,13 @@ export default function PracticePage({ user }) {
       </header>
 
       <div className="practice-toolbar card">
+        <div className="practice-toolbar-intro">
+          <span>Question source</span>
+          <strong>Verified previous-year papers</strong>
+        </div>
         <select value={mode} onChange={e => setMode(e.target.value)} className="filter-select">
-          <option value="adaptive">Adaptive</option>
-          <option value="practice">Browse</option>
+          <option value="adaptive">Adaptive PYQs</option>
+          <option value="practice">Browse PYQs</option>
         </select>
         <select value={subject} onChange={e => setSubject(e.target.value)} className="filter-select">
           <option value="">All subjects</option>
@@ -262,7 +269,7 @@ export default function PracticePage({ user }) {
         </button>
       </div>
 
-      {loading && <LoadingState message="Loading question…" />}
+      {loading && <LoadingState message="Loading a previous-year question…" />}
       {error && !loading && <ErrorState message={error} onRetry={loadQuestion} />}
 
       {!loading && question && (
@@ -273,6 +280,9 @@ export default function PracticePage({ user }) {
               practiceMode
               revealAnswer={revealAnswer}
               revealSolutionSteps={solutionStepIndices}
+              selectedOption={selectedOption}
+              onSelectOption={selectOption}
+              disabled={sending || revealAnswer}
             />
           </div>
 
@@ -293,33 +303,29 @@ export default function PracticePage({ user }) {
             </div>
 
             <div className="answer-block">
-              <label>Your answer</label>
-              <div className="mcq-row">
-                {mcqOptions.map(opt => (
-                  <button
-                    key={opt}
-                    className={`mcq-btn ${answer === `option ${opt}` ? 'selected' : ''}`}
-                    onClick={() => selectOption(opt)}
-                    disabled={sending}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
+              <label>{mcqOptions.length === 4 ? 'Your selected answer' : 'Your answer'}</label>
+              {mcqOptions.length === 4 && (
+                <div className={`selected-answer ${selectedOption ? 'has-value' : ''}`}>
+                  <span>{selectedOption || '—'}</span>
+                  <p>{selectedOption ? `Option ${selectedOption} selected` : 'Choose one option from the question'}</p>
+                </div>
+              )}
+              {mcqOptions.length !== 4 && (
               <textarea
                 className="answer-input"
-                rows={2}
-                placeholder="Or type your answer / working…"
+                rows={3}
+                placeholder="Type your answer or working…"
                 value={answer}
                 onChange={e => setAnswer(e.target.value)}
                 disabled={sending}
               />
+              )}
               <button
-                className="btn btn-primary"
+                className="btn btn-primary submit-attempt-btn"
                 onClick={() => submitAnswer()}
                 disabled={sending || !answer.trim()}
               >
-                {sending ? 'Checking…' : 'Submit attempt'}
+                {sending ? 'Checking…' : 'Check answer'}
               </button>
             </div>
 
