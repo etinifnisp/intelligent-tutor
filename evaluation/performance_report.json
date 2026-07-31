@@ -1,0 +1,15 @@
+{
+  "boot_s": 0.0,
+  "memory_mb": 274.8,
+  "tracemalloc_current_mb": 90.73,
+  "tracemalloc_peak_mb": 102.19,
+  "endpoint_latency_ms": {
+    "/health": 4.61,
+    "/health/ready": 8.29,
+    "/health/metrics": 49.88,
+    "/questions?limit=10": 27.36,
+    "/chapters": 8.66,
+    "/learning/summary/me": 36.35
+  },
+  "checkpoint_pass": true
+}

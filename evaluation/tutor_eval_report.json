@@ -1,0 +1,9 @@
+{
+  "gold_total": 110,
+  "with_answer_key": 70,
+  "verified_correct": 68,
+  "incorrect_detected": 68,
+  "intent_answer_check_rate": 1.0,
+  "verification_accuracy": 0.9714,
+  "checkpoint_pass": true
+}

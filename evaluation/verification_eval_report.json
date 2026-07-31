@@ -1,0 +1,9 @@
+{
+  "gold_total": 110,
+  "with_answer_key": 76,
+  "tool_checked": 73,
+  "verified": 73,
+  "tool_failures": 0,
+  "tool_coverage": 0.9605,
+  "checkpoint_pass": true
+}

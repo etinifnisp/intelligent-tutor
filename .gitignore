@@ -1,12 +1,36 @@
-# Logs 
-jee_research/logs/*.log 
-jee_research/logs/*.txt 
-jee_research/logs/mech_sample.txt 
-jee_research/.venv/ 
-
-# Added ignores
+# Logs
 *.log
 *.zip
 frontend_backup/
-graph_store.json
-learner_memory.json
+
+# Runtime data
+data/graph_store.json
+data/learner_memory.json
+data/app.db
+
+# Papers (large PDFs — keep locally, not in git)
+data/papers/**/*.pdf
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Env
+.env
+backend/.env
+
+# Frozen corpus copy (manifest is committed; JSON is regenerated locally)
+data/corpus/frozen/jee_corpus_v1_baseline.json
+
+# Corpus pipeline outputs (Phase 2) — generated locally
+data/corpus/paper_registry.json
+
+# Retrieval indexes (Phase 4) — generated locally
+data/indexes/*
+!data/indexes/.gitkeep

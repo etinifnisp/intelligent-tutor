@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "frozen_at": "2026-07-30T16:56:31.460926+00:00",
+  "source_path": "data\\corpus\\jee_corpus.json",
+  "frozen_path": "data\\corpus\\frozen\\jee_corpus_v1_baseline.json",
+  "sha256": "e73f66e9c04090d7d5d0386c92c2963f6d1650d6c5ba7ac2946cbbccf2820a9d",
+  "question_count": 6567,
+  "tag": "v0-baseline-prototype",
+  "notes": "Immutable Phase 1 baseline corpus snapshot. Do not overwrite."
+}

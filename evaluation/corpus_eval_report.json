@@ -1,0 +1,22 @@
+{
+  "corpus_v1": {
+    "total": 6567,
+    "subjects": {
+      "Physics": 3097,
+      "Chemistry": 2186,
+      "Mathematics": 1284
+    },
+    "with_correct_answer": 0,
+    "answer_coverage": 0.0
+  },
+  "corpus_v2": {
+    "total": 6567,
+    "reviewed": 0,
+    "with_correct_answer": 2262,
+    "review_coverage": 0.0
+  },
+  "gold_set": {
+    "total": 110
+  },
+  "checkpoint_pass": true
+}
