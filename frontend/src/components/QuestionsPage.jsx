@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { API, authFetch, wsUrl, renderMarkdown } from '../utils.jsx';
+import { API, authFetch, createTutorSocket, renderMarkdown } from '../utils.jsx';
 
 // ── QuestionsPage ──────────────────────────────────────────────────────────
 // Three-panel layout:
@@ -66,7 +66,7 @@ export default function QuestionsPage({ user }) {
   // ── WebSocket ──────────────────────────────────────────────────────────
   function connectWS() {
     if (!activeRef.current) return;
-    const ws = new WebSocket(wsUrl());
+    const ws = createTutorSocket();
     wsRef.current = ws;
     ws.onopen  = () => window.AppLogger.push('info', 'Q-page WS connected');
     ws.onclose = () => {

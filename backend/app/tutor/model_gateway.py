@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import queue
+import threading
 from abc import ABC, abstractmethod
 from typing import AsyncIterator
 
@@ -60,28 +62,47 @@ class GeminiModelGateway(ModelGateway):
         *,
         temperature: float = 0.2,
     ) -> AsyncIterator[str]:
-        from google import genai
-        from google.genai import types
+        loop = asyncio.get_running_loop()
+        chunk_queue: queue.Queue[object] = queue.Queue()
 
-        client = genai.Client()
-        gemini_contents = []
-        for item in contents:
-            role = "user" if item["role"] == "user" else "model"
-            gemini_contents.append(
-                types.Content(role=role, parts=[types.Part.from_text(text=item["content"])])
-            )
+        def producer() -> None:
+            try:
+                from google import genai
+                from google.genai import types
 
-        stream = client.models.generate_content_stream(
-            model=MODEL_NAME if MODEL_NAME.startswith("gemini") else "gemini-2.5-flash",
-            contents=gemini_contents,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=temperature,
-            ),
-        )
-        for chunk in stream:
-            if chunk.text:
-                yield chunk.text
+                client = genai.Client()
+                gemini_contents = []
+                for item in contents:
+                    role = "user" if item["role"] == "user" else "model"
+                    gemini_contents.append(
+                        types.Content(role=role, parts=[types.Part.from_text(text=item["content"])])
+                    )
+
+                stream = client.models.generate_content_stream(
+                    model=MODEL_NAME if MODEL_NAME.startswith("gemini") else "gemini-2.5-flash",
+                    contents=gemini_contents,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        temperature=temperature,
+                    ),
+                )
+                for chunk in stream:
+                    if chunk.text:
+                        chunk_queue.put(chunk.text)
+            except Exception as exc:
+                chunk_queue.put(exc)
+            finally:
+                chunk_queue.put(None)
+
+        threading.Thread(target=producer, daemon=True).start()
+
+        while True:
+            item = await asyncio.to_thread(chunk_queue.get)
+            if item is None:
+                break
+            if isinstance(item, Exception):
+                raise item
+            yield str(item)
 
 
 class OllamaModelGateway(ModelGateway):

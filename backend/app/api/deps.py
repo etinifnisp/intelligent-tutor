@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated, Optional
 
 import jwt
-from fastapi import Depends, HTTPException, WebSocket
+from fastapi import Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.services.auth_service import decode_access_token, get_user_by_id
@@ -36,6 +36,29 @@ def _user_from_token(token: str) -> CurrentUser:
     return CurrentUser(user["id"], user["username"], user["role"])
 
 
+def extract_ws_token(websocket: WebSocket) -> Optional[str]:
+    """Read bearer token from WebSocket subprotocol (preferred) or legacy query param."""
+    requested = websocket.headers.get("sec-websocket-protocol", "")
+    for proto in requested.split(","):
+        candidate = proto.strip()
+        if candidate.startswith("bearer."):
+            return candidate[len("bearer.") :]
+    return websocket.query_params.get("token")
+
+
+def negotiated_ws_subprotocol(websocket: WebSocket) -> Optional[str]:
+    requested = websocket.headers.get("sec-websocket-protocol", "")
+    for proto in requested.split(","):
+        candidate = proto.strip()
+        if candidate.startswith("bearer."):
+            return candidate
+    return None
+
+
+def ws_subprotocol_for_token(token: str) -> str:
+    return f"bearer.{token}"
+
+
 async def get_current_user(
     credentials: Annotated[Optional[HTTPAuthorizationCredentials], Depends(_bearer)],
 ) -> CurrentUser:
@@ -56,11 +79,15 @@ async def get_optional_user(
 
 
 async def ws_authenticate(websocket: WebSocket) -> CurrentUser:
-    token = websocket.query_params.get("token")
-    if token:
+    token = extract_ws_token(websocket)
+    if not token:
+        await websocket.close(code=1008, reason="Authentication required")
+        raise WebSocketDisconnect(code=1008)
+    try:
         return _user_from_token(token)
-    await websocket.close(code=1008, reason="Authentication required")
-    raise WebSocketDisconnect(code=1008)
+    except HTTPException:
+        await websocket.close(code=1008, reason="Invalid or expired token")
+        raise WebSocketDisconnect(code=1008) from None
 
 
 def require_roles(*roles: str):

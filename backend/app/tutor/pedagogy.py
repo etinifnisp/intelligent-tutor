@@ -46,12 +46,13 @@ class PedagogyPolicy:
 
         if classification.intent == TutorIntent.FULL_SOLUTION or student_requested_solution:
             return PedagogyDirective(
-                mode=PedagogyMode.SOLVE,
-                hint_level=4,
-                reveal_answer=True,
+                mode=PedagogyMode.HINT,
+                hint_level=3,
+                reveal_answer=False,
                 system_constraints=(
-                    "Provide a complete, step-by-step verified solution. "
-                    "State the final answer clearly at the end."
+                    "The student requested a full solution, but keep the answer protected. "
+                    "Demonstrate how and why the setup works through one useful step only. "
+                    "Do not complete the calculation, final substitution, option choice, or final answer."
                 ),
             )
 

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { wsUrl, closeWebSocket } from '../utils.jsx';
+import { createTutorSocket, closeWebSocket } from '../utils.jsx';
+
+const REQUEST_TIMEOUT_MS = 45000;
 
 export function useTutorSocket(userId) {
   const wsRef = useRef(null);
@@ -9,7 +11,7 @@ export function useTutorSocket(userId) {
 
   const connect = useCallback(() => {
     if (!activeRef.current) return;
-    const ws = new WebSocket(wsUrl());
+    const ws = createTutorSocket();
     wsRef.current = ws;
     ws.onopen = () => {
       setConnected(true);
@@ -41,16 +43,42 @@ export function useTutorSocket(userId) {
       return false;
     }
     setSending(true);
+    let settled = false;
+
+    const finish = (event) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      setSending(false);
+      wsRef.current?.removeEventListener('message', handler);
+      onEvent?.(event);
+    };
+
     const handler = (e) => {
-      const data = JSON.parse(e.data);
+      let data;
+      try {
+        data = JSON.parse(e.data);
+      } catch {
+        finish({ type: 'error', message: 'Received an invalid tutor response.' });
+        return;
+      }
       onEvent?.(data);
       if (data.type === 'done' || data.type === 'error') {
-        setSending(false);
-        wsRef.current?.removeEventListener('message', handler);
+        finish(data);
       }
     };
+
+    const timeoutId = setTimeout(() => {
+      finish({ type: 'error', message: 'Tutor response timed out. Please retry.' });
+    }, REQUEST_TIMEOUT_MS);
+
     wsRef.current.addEventListener('message', handler);
-    wsRef.current.send(JSON.stringify(payload));
+    try {
+      wsRef.current.send(JSON.stringify(payload));
+    } catch {
+      finish({ type: 'error', message: 'Could not send your message. Please retry.' });
+      return false;
+    }
     return true;
   }, []);
 

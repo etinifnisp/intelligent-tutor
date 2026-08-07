@@ -277,6 +277,7 @@ class RetrievalService:
         return rerank(query, candidates, top_k=top_k)
 
     def _to_evidence(self, row: dict[str, Any], score: float, source: str) -> dict[str, Any]:
+        diagram_paths = row.get("diagram_paths") or []
         return {
             "type": "question",
             "question_id": row["question_id"],
@@ -287,7 +288,9 @@ class RetrievalService:
             "review_status": row.get("review_status"),
             "paper_id": row.get("paper_id"),
             "year": row.get("year"),
-            "diagram_paths": row.get("diagram_paths") or [],
+            "diagram_paths": diagram_paths,
+            "has_answer": bool(row.get("correct_answer")),
+            "has_diagram": bool(diagram_paths),
             "rrf_score": round(score, 4),
             "source": source,
         }
@@ -301,8 +304,15 @@ class RetrievalService:
             return "No retrieved evidence. Explain uncertainty instead of inventing a citation."
         lines = ["== RETRIEVED EVIDENCE (question-level, not full PDF) =="]
         for position, item in enumerate(evidence, start=1):
+            flags: list[str] = []
+            if not item.get("has_answer"):
+                flags.append("NO ANSWER KEY")
+            if item.get("has_diagram") and not item.get("diagram_paths"):
+                flags.append("DIAGRAM REQUIRED — not available")
+            flag_str = f" [{', '.join(flags)}]" if flags else ""
             lines.append(
-                f"{position}. [{item.get('question_id')}] {item.get('subject')} / {item.get('chapter')}\n"
+                f"{position}. [{item.get('question_id')}]{flag_str} "
+                f"{item.get('subject')} / {item.get('chapter')}\n"
                 f"   {item.get('stem_text', '')[:300]}"
             )
         return "\n".join(lines)

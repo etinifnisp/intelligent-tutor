@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import { apiFetch, masteryColor, subjectColor } from '../utils.jsx';
+import { authFetch, masteryColor, subjectColor } from '../utils.jsx';
 
 // ── GraphPage ──────────────────────────────────────────────────────────────
 // Page 4: Interactive D3 force-directed graph of the JEE knowledge concept map.
@@ -20,8 +20,8 @@ export default function GraphPage({ user }) {
   // ── Fetch graph topology + learner mastery on mount ───────────────────
   useEffect(() => {
     Promise.all([
-      apiFetch('/graph').then(r => r.json()),
-      apiFetch('/stats/me').then(r => r.json()).catch(() => ({ mastery: {}, chapter_mastery: {} })),
+      authFetch('/graph').then(r => r.json()),
+      authFetch('/stats/me').then(r => r.json()).catch(() => ({ mastery: {}, chapter_mastery: {} })),
     ]).then(([gData, mData]) => {
       rawDataRef.current = gData;
 

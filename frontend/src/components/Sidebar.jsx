@@ -27,7 +27,7 @@ export default function Sidebar({ page, setPage, online, user }) {
   };
 
   const studentTabs = [
-    { id: 'today',    label: 'Today'    },
+    { id: 'today',    label: 'Dashboard' },
     { id: 'practice', label: 'Practice' },
     { id: 'tutor',    label: 'Ask Tutor' },
     { id: 'mistakes', label: 'Mistakes' },

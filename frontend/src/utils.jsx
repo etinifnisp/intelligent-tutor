@@ -4,6 +4,7 @@ import { API, WS_BASE } from './config.js';
 
 export { API, WS_BASE };
 const AUTH_TOKEN_KEY = 'jee_tutor_access_token';
+const AUTH_EXEMPT_PREFIXES = ['/auth/guest', '/auth/login', '/auth/register', '/auth/refresh', '/health'];
 
 export function setAccessToken(token) {
   if (token) sessionStorage.setItem(AUTH_TOKEN_KEY, token);
@@ -14,21 +15,86 @@ export function getAccessToken() {
   return sessionStorage.getItem(AUTH_TOKEN_KEY);
 }
 
-export async function apiFetch(path, options = {}) {
-  return fetch(`${API}${path}`, options);
+export async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
-/** @deprecated Use apiFetch — auth removed; kept for existing imports */
-export function authFetch(path, options = {}) {
-  const token = getAccessToken();
+function shouldAttachAuth(path) {
+  return !AUTH_EXEMPT_PREFIXES.some((prefix) => path.startsWith(prefix));
+}
+
+export async function apiFetch(path, options = {}, timeoutMs = 15000) {
   const headers = new Headers(options.headers || {});
-  if (token) headers.set('Authorization', `Bearer ${token}`);
-  return apiFetch(path, { ...options, headers });
+  const token = getAccessToken();
+  if (shouldAttachAuth(path) && token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  return fetchWithTimeout(`${API}${path}`, { ...options, headers }, timeoutMs);
 }
 
-export function wsUrl() {
+/** Backward-compatible alias — apiFetch now attaches auth automatically. */
+export function authFetch(path, options = {}, timeoutMs = 15000) {
+  return apiFetch(path, options, timeoutMs);
+}
+
+export async function waitForBackend(maxWaitMs = 60000) {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    try {
+      const response = await fetchWithTimeout(`${API}/health/live`, {}, 3000);
+      if (response.ok) return true;
+    } catch {
+      // Backend still booting or unreachable — retry.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  return false;
+}
+
+export async function startGuestSession(retries = 3) {
+  const backendReady = await waitForBackend();
+  if (!backendReady) {
+    throw new Error('Backend is not responding. Start it with `python app.py` in the backend folder.');
+  }
+
+  let lastError = null;
+  for (let attempt = 0; attempt < retries; attempt += 1) {
+    try {
+      const response = await apiFetch('/auth/guest', { method: 'POST' }, 15000);
+      if (!response.ok) {
+        const message = response.status === 429
+          ? 'Too many guest sessions from this device. Wait a moment and retry.'
+          : 'Could not start a guest session';
+        throw new Error(message);
+      }
+      const session = await response.json();
+      setAccessToken(session.access_token);
+      return session;
+    } catch (error) {
+      lastError = error;
+      if (attempt < retries - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+      }
+    }
+  }
+  throw lastError || new Error('Could not start a guest session');
+}
+
+export function createTutorSocket() {
   const token = getAccessToken();
-  return token ? `${WS_BASE}?token=${encodeURIComponent(token)}` : WS_BASE;
+  if (!token) return new WebSocket(WS_BASE);
+  return new WebSocket(WS_BASE, [`bearer.${token}`]);
+}
+
+/** @deprecated Use createTutorSocket — tokens are no longer passed in the URL. */
+export function wsUrl() {
+  return WS_BASE;
 }
 
 // Returns a colour string representing mastery level 0-1

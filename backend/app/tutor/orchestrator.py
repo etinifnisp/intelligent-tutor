@@ -113,6 +113,7 @@ class TutorOrchestrator:
             },
         }
 
+        evidence: list[dict] = []
         evidence_block = ""
         if classification.requires_retrieval and getattr(app_state.retrieval, "ready", False):
             search_query = ctx.student_message
@@ -144,6 +145,19 @@ class TutorOrchestrator:
             if note:
                 evidence_block += f"\n\nConcept note: {note.get('note')}"
 
+        # Determine answer key and diagram availability from active question + evidence.
+        answer_available = bool(
+            ctx.target_question and get_official_answer(ctx.target_question)
+        )
+        # diagram_missing: question references a diagram but we have no actual file.
+        q_has_diagram = bool(ctx.target_question and ctx.target_question.get("diagram_paths"))
+        evidence_has_missing_diagram = any(
+            item.get("has_diagram") and not item.get("diagram_paths") for item in evidence
+        )
+        diagram_missing = (q_has_diagram and not any(
+            ctx.target_question.get("diagram_paths", [])
+        )) or evidence_has_missing_diagram
+
         mastery_map = ctx.learner_memory.get("mastery", {})
         misconceptions = ctx.learner_memory.get("misconceptions", {})
         safe_question = self.pedagogy.strip_answer_from_context(
@@ -160,6 +174,8 @@ class TutorOrchestrator:
             evidence_block=evidence_block,
             question_context=safe_question,
             related_questions=related_questions or None,
+            answer_available=answer_available,
+            diagram_missing=diagram_missing,
         )
 
         contents = build_chat_contents(ctx.chat_history, ctx.student_message)
@@ -171,15 +187,24 @@ class TutorOrchestrator:
 
         if classification.requires_verification or classification.intent == TutorIntent.ANSWER_CHECK:
             verifier = app_state.verification
-            attempt_report = verifier.verify_attempt(ctx.student_message, ctx.target_question)
-            verification_status = VerificationStatus(attempt_report.status.value)
-            answer_confidence = attempt_report.confidence
-            if attempt_report.status.value == "VERIFIED":
-                next_action = NextAction.CONTINUE
-            elif attempt_report.status.value == "INCORRECT":
-                next_action = NextAction.TRY_AGAIN
-            elif attempt_report.status.value == "PENDING":
-                next_action = NextAction.TRY_AGAIN
+            if not answer_available:
+                # No answer key — skip deterministic checking to avoid misleading feedback.
+                attempt_report = VerificationReport(
+                    status=VerificationStatus.UNVERIFIED,
+                    confidence=0.0,
+                    summary="No verified answer key for this question — verification skipped.",
+                )
+                verification_status = VerificationStatus.UNVERIFIED
+            else:
+                attempt_report = verifier.verify_attempt(ctx.student_message, ctx.target_question)
+                verification_status = VerificationStatus(attempt_report.status.value)
+                answer_confidence = attempt_report.confidence
+                if attempt_report.status.value == "VERIFIED":
+                    next_action = NextAction.CONTINUE
+                elif attempt_report.status.value == "INCORRECT":
+                    next_action = NextAction.TRY_AGAIN
+                elif attempt_report.status.value == "PENDING":
+                    next_action = NextAction.TRY_AGAIN
 
             yield {
                 "type": "pipeline_step",
@@ -192,7 +217,7 @@ class TutorOrchestrator:
                     "tool_calls": [c.model_dump() for c in attempt_report.tool_calls],
                 },
             }
-            if attempt_report.summary:
+            if attempt_report.summary and answer_available:
                 system_instruction += f"\n\n== VERIFIED CHECK RESULT ==\n{attempt_report.summary}\n"
 
         full_response = ""
@@ -264,7 +289,7 @@ class TutorOrchestrator:
             verification_status = VerificationStatus.UNVERIFIED
             full_response += (
                 "\n\n_(Hint sanitized: final answer withheld per pedagogy policy. "
-                "Ask for another hint or say 'full solution' if needed.)_"
+                "Share your next step or ask for another hint.)_"
             )
 
         concepts = [ctx.active_concept_node] if ctx.active_concept_node else []

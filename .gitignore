@@ -24,6 +24,19 @@ frontend/dist/
 # Env
 .env
 backend/.env
+.env.local
+backend/.env.local
+
+# Local docs / reports (not for git)
+intelligent_jee_tutor_production_audit_local_hackathon.md
+impact-statement.pdf
+hardware_profile.md
+hackathon_master_document.md
+baseline_report.md
+scripts/generate_impact_pdf.py
+
+# Cursor IDE
+.cursor/
 
 # Frozen corpus copy (manifest is committed; JSON is regenerated locally)
 data/corpus/frozen/jee_corpus_v1_baseline.json

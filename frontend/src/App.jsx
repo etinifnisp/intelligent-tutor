@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { apiFetch, setAccessToken } from './utils.jsx';
+import { apiFetch, startGuestSession } from './utils.jsx';
 import HeroPage from './components/HeroPage.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import TodayPage from './components/TodayPage.jsx';
@@ -17,23 +17,33 @@ export default function App() {
   const [mobileNav, setMobileNav] = useState(false);
   const [user, setUser] = useState(null);
   const [authError, setAuthError] = useState('');
+  const [sessionState, setSessionState] = useState('loading');
 
   useEffect(() => {
-    apiFetch('/auth/guest', { method: 'POST' })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('Could not start a guest session');
-        return response.json();
-      })
-      .then((session) => {
-        setAccessToken(session.access_token);
+    let active = true;
+
+    async function bootSession() {
+      setSessionState('loading');
+      setAuthError('');
+      try {
+        const session = await startGuestSession();
+        if (!active) return;
         setUser(session.user);
-      })
-      .catch((error) => setAuthError(error.message));
+        setSessionState('ready');
+      } catch (error) {
+        if (!active) return;
+        setAuthError(error.message || 'Could not start a guest session');
+        setSessionState('error');
+      }
+    }
+
+    bootSession();
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
     function check() {
-      apiFetch('/questions?limit=1')
+      apiFetch('/questions?limit=1', {}, 5000)
         .then(r => setOnline(r.ok))
         .catch(() => setOnline(false));
     }
@@ -42,12 +52,45 @@ export default function App() {
     return () => clearInterval(t);
   }, []);
 
-  if (view === 'landing') {
-    return <HeroPage onEnter={() => { setView('dashboard'); window.scrollTo(0, 0); }} />;
+  async function retryGuestSession() {
+    setSessionState('loading');
+    setAuthError('');
+    try {
+      const session = await startGuestSession();
+      setUser(session.user);
+      setSessionState('ready');
+    } catch (error) {
+      setAuthError(error.message || 'Could not start a guest session');
+      setSessionState('error');
+    }
   }
 
-  if (authError) return <div className="app-error">{authError}</div>;
-  if (!user) return <div className="app-loading">Starting your secure guest session…</div>;
+  if (view === 'landing') {
+    return (
+      <HeroPage
+        onEnter={() => { setView('dashboard'); window.scrollTo(0, 0); }}
+        sessionReady={sessionState === 'ready'}
+        sessionLoading={sessionState === 'loading'}
+        sessionError={authError}
+        onRetrySession={retryGuestSession}
+      />
+    );
+  }
+
+  if (sessionState === 'error') {
+    return (
+      <div className="app-error">
+        <p>{authError}</p>
+        <button type="button" className="btn btn-primary" onClick={retryGuestSession}>
+          Retry connection
+        </button>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <div className="app-loading">Starting your secure guest session…</div>;
+  }
 
   return (
     <div id="app-shell">

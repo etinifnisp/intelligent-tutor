@@ -53,6 +53,18 @@ def test_learning_today_plan(client, auth_headers):
     assert "weak_concepts" in body
 
 
+def test_adaptive_practice_recommends_clean_pyqs(client, auth_headers):
+    res = client.get("/learning/next-question?limit=5", headers=auth_headers)
+    assert res.status_code == 200
+    recommendations = res.json()["recommendations"]
+    assert recommendations
+    for recommendation in recommendations:
+        question = recommendation["question"]
+        assert question["source"]["kind"] == "PYQ"
+        assert [option["label"] for option in question["options"]] == ["A", "B", "C", "D"]
+        assert "raw_text" not in question
+
+
 def test_learning_progress(client, auth_headers):
     res = client.get("/learning/progress/me", headers=auth_headers)
     assert res.status_code == 200

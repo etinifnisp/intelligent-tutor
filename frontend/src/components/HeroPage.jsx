@@ -1,7 +1,14 @@
 import LandingLayout from './LandingLayout.jsx';
 import FeaturesSection from './FeaturesSection.jsx';
 
-export default function HeroPage({ onEnter }) {
+export default function HeroPage({ onEnter, sessionReady, sessionLoading, sessionError, onRetrySession }) {
+  const enterDisabled = !sessionReady;
+  const enterLabel = sessionLoading
+    ? 'Connecting to tutor…'
+    : sessionReady
+      ? 'Open my study plan'
+      : 'Connection unavailable';
+
   return (
     <LandingLayout onEnter={onEnter}>
       <section id="home" className="hero-section">
@@ -15,12 +22,25 @@ export default function HeroPage({ onEnter }) {
             </p>
 
             <div className="hero-actions">
-              <button type="button" className="btn btn-primary hero-cta" onClick={onEnter}>
-                Open my study plan
+              <button
+                type="button"
+                className="btn btn-primary hero-cta"
+                onClick={onEnter}
+                disabled={enterDisabled}
+              >
+                {enterLabel}
                 <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
                   <path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
+              {sessionError && (
+                <div className="hero-session-error">
+                  <p>{sessionError}</p>
+                  <button type="button" className="btn btn-secondary" onClick={onRetrySession}>
+                    Retry connection
+                  </button>
+                </div>
+              )}
               <button type="button" className="btn btn-secondary hero-cta-secondary"
                 onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>
                 See how it works

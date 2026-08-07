@@ -1,7 +1,10 @@
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+
+from app.api.deps import CurrentUser, get_current_user
+from app.config import GUEST_RATE_LIMIT, GUEST_RATE_WINDOW_SECONDS
+from app.middleware.rate_limit import allow_request
 
 from app.api.deps import CurrentUser, get_current_user
 from app.models.schemas import (
@@ -25,8 +28,15 @@ logger = logging.getLogger("tutor.auth")
 
 
 @router.post("/guest", response_model=TokenResponse)
-async def create_guest():
+async def create_guest(request: Request):
     """Anonymous guest session with server-issued identity."""
+    client_ip = request.client.host if request.client else "unknown"
+    if not allow_request(
+        f"guest:{client_ip}",
+        limit=GUEST_RATE_LIMIT,
+        window_seconds=GUEST_RATE_WINDOW_SECONDS,
+    ):
+        raise HTTPException(status_code=429, detail="Too many guest sessions. Please try again later.")
     result = create_guest_user()
     logger.info("Guest user created: %s", result["user"]["id"])
     return result

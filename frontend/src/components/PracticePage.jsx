@@ -3,11 +3,12 @@ import {
   API, apiFetch, authFetch, renderMarkdown, confidenceValue, questionId,
 } from '../utils.jsx';
 import { parseQuestionContent, SOLUTION_STEPS } from '../questionContent.js';
+import { isLearningStepDisabled } from '../learningSteps.js';
 import { useTutorSocket } from '../hooks/useTutorSocket.js';
 import QuestionDisplay from './QuestionDisplay.jsx';
 import LoadingState from './LoadingState.jsx';
 import ErrorState from './ErrorState.jsx';
-import { saveLastSession } from './TodayPage.jsx';
+import { saveLastSession } from '../lastSession.js';
 
 const CONFIDENCE_LABELS = ['Not sure', 'Low', 'Medium', 'High', 'Very confident'];
 const HINT_MESSAGES = [
@@ -196,6 +197,7 @@ export default function PracticePage({ user }) {
 
     const idx = Math.min(stepIndex, HINT_MESSAGES.length - 1);
     setTutorReply('');
+    setFeedback(null);
     send({
       student_message: HINT_MESSAGES[idx],
       question_id: questionId(question),
@@ -284,6 +286,59 @@ export default function PracticePage({ user }) {
               onSelectOption={selectOption}
               disabled={sending || revealAnswer}
             />
+            <section className="practice-learning-help" aria-labelledby="step-help-title">
+              <div className="learning-help-header">
+                <div className="learning-help-icon">01</div>
+                <div>
+                  <span className="learning-help-kicker">Guided learning</span>
+                  <h2 id="step-help-title">Step-by-step help</h2>
+                  <p>Reveal only what you need. Work from the core concept toward the complete solution.</p>
+                </div>
+              </div>
+
+              <div className="solution-stepper learning-stepper">
+                {SOLUTION_STEPS.map((step, idx) => (
+                  <button
+                    key={step.id}
+                    className={`solution-step-btn ${hintLevel > idx ? 'revealed' : ''} ${hintLevel === idx ? 'next' : ''}`}
+                    onClick={() => revealLocalStep(idx)}
+                    disabled={isLearningStepDisabled({ sending, stepIndex: idx, hintLevel })}
+                    title={step.description}
+                  >
+                    <span className="solution-step-num">{hintLevel > idx ? '✓' : idx + 1}</span>
+                    <span className="solution-step-copy">
+                      <strong>{step.label}</strong>
+                      <small>{step.description}</small>
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {sending && hintLevel > 0 && (
+                <div className="learning-help-loading"><span className="spinner"/>Preparing the next learning step…</div>
+              )}
+
+              {(feedback || tutorReply) && (
+                <div className="practice-feedback learning-feedback">
+                  <div className="learning-feedback-label">
+                    <span>AI tutor explanation</span>
+                    {feedback?.verification && (
+                      <span className={`verification-badge ${feedback.verification.toLowerCase()}`}>
+                        {feedback.verification}
+                      </span>
+                    )}
+                  </div>
+                  {feedback?.mastery && <div className="mastery-update-pill">Mastery updated</div>}
+                  {tutorReply && (
+                    <div className="tutor-feedback-text" dangerouslySetInnerHTML={renderMarkdown(tutorReply)} />
+                  )}
+                </div>
+              )}
+
+              {!tutorReply && !sending && (
+                <p className="learning-help-note">Start with Concept for a small nudge. The correct answer stays hidden until you submit or reach the full solution.</p>
+              )}
+            </section>
           </div>
 
           <div className="practice-panel card">
@@ -328,49 +383,6 @@ export default function PracticePage({ user }) {
                 {sending ? 'Checking…' : 'Check answer'}
               </button>
             </div>
-
-            <div className="hint-ladder">
-              <label>Step-by-step help</label>
-              <p className="hint-help-top">
-                Answers stay hidden until you submit or reveal the full solution.
-              </p>
-              <div className="solution-stepper">
-                {SOLUTION_STEPS.map((step, idx) => (
-                  <button
-                    key={step.id}
-                    className={`solution-step-btn ${hintLevel > idx ? 'revealed' : ''}`}
-                    onClick={() => revealLocalStep(idx)}
-                    disabled={sending}
-                    title={step.description}
-                  >
-                    <span className="solution-step-num">{idx + 1}</span>
-                    <span className="solution-step-label">{step.label}</span>
-                  </button>
-                ))}
-              </div>
-              <p className="hint-help">
-                Concept → Formula → Setup → Full solution (with answer)
-              </p>
-            </div>
-
-            {(feedback || tutorReply) && (
-              <div className="practice-feedback">
-                {feedback?.verification && (
-                  <div className={`verification-badge ${feedback.verification.toLowerCase()}`}>
-                    {feedback.verification}
-                  </div>
-                )}
-                {feedback?.mastery && (
-                  <div className="mastery-update-pill">Mastery updated</div>
-                )}
-                {tutorReply && (
-                  <div
-                    className="tutor-feedback-text"
-                    dangerouslySetInnerHTML={renderMarkdown(tutorReply)}
-                  />
-                )}
-              </div>
-            )}
 
             <div className="practice-actions">
               <button className="btn btn-secondary" onClick={loadQuestion} disabled={loading}>

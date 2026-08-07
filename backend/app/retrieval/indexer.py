@@ -31,6 +31,14 @@ logger = logging.getLogger("tutor.retrieval.indexer")
 INDEX_SCHEMA_VERSION = 2
 EMBEDDING_BACKEND = "sentence_transformers"
 
+# Review priority order for deduplication (higher index = higher priority).
+_REVIEW_PRIORITY: dict[str, int] = {
+    "NEEDS_REVIEW": 0,
+    "AUTO_ACCEPTED": 1,
+    "AUTO_VERIFIED": 2,
+    "REVIEWED": 3,
+}
+
 
 class EmbeddingUnavailableError(RuntimeError):
     """Raised when the configured embedding model cannot be loaded."""
@@ -63,6 +71,37 @@ def load_corpus_v2(path: Path) -> list[dict[str, Any]]:
                 raise ValueError(f"Missing question_id at {path}:{number}")
             rows.append(row)
     return rows
+
+
+def _content_hash(question: dict[str, Any]) -> str:
+    """Stable content fingerprint for deduplication (text + sorted options)."""
+    stem = " ".join((question.get("stem_text") or question.get("normalized_text") or "").split()).lower()
+    opts = sorted(
+        f"{o.get('label', '').upper()}:{' '.join((o.get('text') or '').split()).lower()}"
+        for o in (question.get("options") or [])
+        if isinstance(o, dict)
+    )
+    return hashlib.sha256((stem + "|".join(opts)).encode()).hexdigest()
+
+
+def deduplicate_records(records: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+    """Remove duplicate questions, keeping the highest-reviewed version of each.
+
+    Returns ``(deduped_records, duplicate_count)``.
+    """
+    best: dict[str, dict[str, Any]] = {}
+    for record in records:
+        h = _content_hash(record)
+        existing = best.get(h)
+        if existing is None:
+            best[h] = record
+            continue
+        existing_priority = _REVIEW_PRIORITY.get(str(existing.get("review_status") or ""), 0)
+        record_priority = _REVIEW_PRIORITY.get(str(record.get("review_status") or ""), 0)
+        if record_priority > existing_priority:
+            best[h] = record
+    deduped = list(best.values())
+    return deduped, len(records) - len(deduped)
 
 
 def document_text(question: dict[str, Any]) -> str:
@@ -158,6 +197,23 @@ def build_faiss(vectors: np.ndarray, question_ids: list[str], index_path: Path, 
     ids_path.write_text(json.dumps(question_ids), encoding="utf-8")
 
 
+def _build_note_text(subject: str, chapter: str, bucket: dict[str, Any]) -> str:
+    """Produce a structured, data-driven concept note string for LLM consumption."""
+    total = bucket["total"]
+    topics = ", ".join(sorted(bucket["topics"])[:8]) or "General"
+    diff = bucket["difficulty"]
+    diff_parts = ", ".join(f"{k} {v}" for k, v in sorted(diff.items()) if v)
+    ans_pct = round(100 * bucket["with_answer"] / total) if total else 0
+    qtypes = ", ".join(sorted(bucket["qtypes"])[:3]) or "MCQ"
+    return (
+        f"JEE {subject} · {chapter} ({total} questions). "
+        f"Topics: {topics}. "
+        f"Difficulty: {diff_parts}. "
+        f"Answer key coverage: {ans_pct}%. "
+        f"Question types: {qtypes}."
+    )
+
+
 def build_concept_notes(records: list[dict[str, Any]], destination: Path) -> None:
     by_chapter: dict[str, dict[str, Any]] = {}
     for question in records:
@@ -171,14 +227,39 @@ def build_concept_notes(records: list[dict[str, Any]], destination: Path) -> Non
                 "subject": subject,
                 "chapter": chapter,
                 "sample_question_ids": [],
-                "note": f"JEE {subject} chapter: {chapter}.",
+                "total": 0,
+                "with_answer": 0,
+                "topics": set(),
+                "difficulty": {},
+                "qtypes": set(),
             },
         )
+        bucket["total"] += 1
+        if question.get("correct_answer"):
+            bucket["with_answer"] += 1
+        if question.get("topic"):
+            bucket["topics"].add(question["topic"])
+        diff = str(question.get("difficulty") or "Medium").title()
+        bucket["difficulty"][diff] = bucket["difficulty"].get(diff, 0) + 1
+        qtype = str(question.get("question_type") or "MCQ_SINGLE")
+        bucket["qtypes"].add(qtype)
         if len(bucket["sample_question_ids"]) < 3:
             bucket["sample_question_ids"].append(question["question_id"])
+
     with destination.open("w", encoding="utf-8") as handle:
-        for note in by_chapter.values():
-            handle.write(json.dumps(note, ensure_ascii=False) + "\n")
+        for key, bucket in by_chapter.items():
+            note_text = _build_note_text(bucket["subject"], bucket["chapter"], bucket)
+            record = {
+                "concept_id": bucket["concept_id"],
+                "subject": bucket["subject"],
+                "chapter": bucket["chapter"],
+                "sample_question_ids": bucket["sample_question_ids"],
+                "total_questions": bucket["total"],
+                "answer_coverage_pct": round(100 * bucket["with_answer"] / bucket["total"]) if bucket["total"] else 0,
+                "difficulty_distribution": bucket["difficulty"],
+                "note": note_text,
+            }
+            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
 def _publish(staging_dir: Path, manifest: dict[str, Any]) -> None:
@@ -201,10 +282,21 @@ def build_indexes(corpus_path: Path | None = None) -> dict[str, Any]:
     if not corpus_path.exists():
         raise FileNotFoundError(f"corpus_v2 not found: {corpus_path}")
 
-    records = load_corpus_v2(corpus_path)
-    question_ids = [record["question_id"] for record in records]
-    if not records or len(question_ids) != len(set(question_ids)):
+    raw_records = load_corpus_v2(corpus_path)
+    if not raw_records:
         raise ValueError("Corpus must contain at least one uniquely identified question.")
+
+    records, duplicate_count = deduplicate_records(raw_records)
+    logger.info(
+        "Deduplication: %s raw → %s unique (%s duplicates removed).",
+        len(raw_records),
+        len(records),
+        duplicate_count,
+    )
+
+    question_ids = [record["question_id"] for record in records]
+    if len(question_ids) != len(set(question_ids)):
+        raise ValueError("Corpus contains non-unique question_ids after deduplication.")
     texts = [document_text(record) for record in records]
     if any(not text for text in texts):
         raise ValueError("Corpus contains a question with no indexable text.")
@@ -239,6 +331,11 @@ def build_indexes(corpus_path: Path | None = None) -> dict[str, Any]:
             "embedding_backend": metadata["backend"],
             "embedding_model": metadata["model"],
             "vector_dim": int(vectors.shape[1]),
+            "duplicate_stats": {
+                "raw_count": len(raw_records),
+                "duplicates_removed": duplicate_count,
+                "unique_count": len(records),
+            },
             "artifacts": {
                 name: file_sha256(staging_dir / name)
                 for name in ("retrieval.db", "faiss.index", "faiss_ids.json", "concept_notes.jsonl")

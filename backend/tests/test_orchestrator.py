@@ -12,8 +12,9 @@ from app.tutor.answer_check import check_answer, response_reveals_answer
 from app.tutor.model_gateway import MockModelGateway
 from app.tutor.orchestrator import TutorOrchestrator
 from app.tutor.pedagogy import PedagogyPolicy
+from app.tutor.prompts import build_system_prompt
 from app.tutor.router import IntentRouter
-from app.tutor.schemas import TutorContext, TutorIntent, VerificationStatus
+from app.tutor.schemas import PedagogyMode, TutorContext, TutorIntent, VerificationStatus
 from app.verification.service import VerificationService
 
 
@@ -47,6 +48,33 @@ def test_pedagogy_hint_does_not_reveal_answer():
     policy = PedagogyPolicy()
     safe = policy.strip_answer_from_context({"correct_answer": "B", "stem_text": "Q"}, reveal=False)
     assert "correct_answer" not in safe
+
+
+def test_full_solution_request_stays_method_first_without_revealing_answer():
+    policy = PedagogyPolicy()
+    classification = IntentRouter().classify("Give me the full solution", has_question=True)
+
+    directive = policy.select(classification, student_requested_solution=True)
+
+    assert classification.intent == TutorIntent.FULL_SOLUTION
+    assert directive.mode == PedagogyMode.HINT
+    assert directive.reveal_answer is False
+    assert directive.hint_level == 3
+    assert "final answer" in directive.system_constraints.lower()
+
+
+def test_system_prompt_teaches_how_and_why_without_completing_the_problem():
+    prompt = build_system_prompt(
+        pedagogy_constraints="Give one scaffolded step.",
+        pedagogy_mode="HINT",
+        hint_level=2,
+        mastery_map={},
+        misconceptions={},
+    )
+
+    assert "how and why" in prompt.lower()
+    assert "do not provide" in prompt.lower()
+    assert "final numerical value" in prompt.lower()
 
 
 def test_answer_check_resolves_correct_option(sample_question):
