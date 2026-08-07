@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { API, authFetch, createTutorSocket, renderMarkdown } from '../utils.jsx';
+import ChatMessageContent from './ChatMessageContent.jsx';
+import { getSelectedModelId } from '../modelSettings.js';
 
 // ── QuestionsPage ──────────────────────────────────────────────────────────
 // Three-panel layout:
@@ -159,6 +161,7 @@ export default function QuestionsPage({ user }) {
       question_id: qId,
       chapter_context: selectedChapter ? `${selectedSubject}: ${selectedChapter}` : null,
       chat_history: history,
+      openrouter_model: getSelectedModelId(),
     }));
     if (!text) {
       setInput('');
@@ -298,7 +301,7 @@ export default function QuestionsPage({ user }) {
               );
               return (
                 <div key={i} className="panel-msg panel-msg-ai">
-                  <span dangerouslySetInnerHTML={renderMarkdown(m.text)}/>
+                  <ChatMessageContent text={m.text} streaming={m.role === 'streaming'} />
                   {m.role === 'streaming' && <span className="typing-cursor"/>}
                 </div>
               );

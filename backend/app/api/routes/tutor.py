@@ -6,16 +6,39 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
 from app.api.deps import negotiated_ws_subprotocol, ws_authenticate
-from app.config import MAX_MESSAGE_LENGTH
+from app.config import MAX_MESSAGE_LENGTH, MODEL_NAME, get_openrouter_api_key, using_openrouter
 from app.learning.schemas import AttemptEvidence
 from app.middleware.rate_limit import allow_request
 from app.models.schemas import ChatPayload
 from app.services.corpus import get_questions_ram
+from app.services.model_catalog import list_allowed_models, resolve_openrouter_model
+from app.tutor.model_gateway import create_model_gateway
 from app.tutor.orchestrator import TutorOrchestrator
 from app.tutor.schemas import TutorContext, TutorIntent
 
 router = APIRouter()
 logger_ws = logging.getLogger("tutor.websocket")
+
+
+@router.get("/tutor/models")
+async def list_tutor_models():
+    return {
+        "provider": "openrouter" if using_openrouter() else "gemini",
+        "default_model": resolve_openrouter_model(MODEL_NAME),
+        "models": list_allowed_models(),
+    }
+
+
+def _build_model_gateway(payload: ChatPayload):
+    api_key = get_openrouter_api_key()
+    if not api_key:
+        return None
+    model_id = payload.resolved_openrouter_model()
+    return create_model_gateway(
+        provider="openrouter",
+        api_key=api_key,
+        model_name=model_id,
+    )
 
 
 def _resolve_context(payload: ChatPayload, websocket: WebSocket, user_id: str) -> TutorContext:
@@ -86,8 +109,15 @@ async def _process_message(
     tutor_meta = None
     done_sent = False
 
+    model_override = _build_model_gateway(payload)
+    if model_override:
+        active_model_name = getattr(getattr(model_override, "inner", None), "model_name", MODEL_NAME)
+        logger_ws.info("[%s] Using OpenRouter gateway (model=%s)", user_id, active_model_name)
+    elif not get_openrouter_api_key():
+        logger_ws.warning("[%s] OPENROUTER_API_KEY missing — using server default model gateway", user_id)
+
     try:
-        async for event in orchestrator.handle_message(ctx, websocket.app.state):
+        async for event in orchestrator.handle_message(ctx, websocket.app.state, model_gateway=model_override):
             if event["type"] == "token":
                 full_response += event.get("text", "")
             elif event["type"] == "tutor_meta":

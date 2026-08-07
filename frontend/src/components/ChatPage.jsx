@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { renderMarkdown } from '../utils.jsx';
+import ChatMessageContent from './ChatMessageContent.jsx';
 import { scrollChatToBottom } from '../chatScroll.js';
 import { useTutorSocket } from '../hooks/useTutorSocket.js';
 
@@ -15,9 +15,7 @@ export default function ChatPage({ user }) {
   useEffect(() => { scrollChatToBottom(messagesRef.current); }, [messages]);
 
   function handleTutorEvent(data) {
-    if (data.type === 'status') {
-      setMessages(m => [...m, { role: 'status', text: `${data.lane}` }]);
-    } else if (data.type === 'token') {
+    if (data.type === 'token') {
       setMessages(m => {
         const prev = [...m];
         const last = prev[prev.length - 1];
@@ -125,11 +123,6 @@ export default function ChatPage({ user }) {
           </div>
         ) : (
           messages.map((m, i) => {
-            if (m.role === 'status') return (
-              <div key={i} className="msg-status-row">
-                <span className="msg-status-pill">{m.text}</span>
-              </div>
-            );
             if (m.role === 'meta') return (
               <div key={i} className="msg-meta-row">
                 {m.verification && (
@@ -146,7 +139,7 @@ export default function ChatPage({ user }) {
             return (
               <div key={i} className="msg-row ai">
                 <div className="msg-bubble ai">
-                  <span dangerouslySetInnerHTML={renderMarkdown(m.text)}/>
+                  <ChatMessageContent text={m.text} streaming={m.role === 'streaming'} />
                   {m.role === 'streaming' && <span className="typing-cursor"/>}
                 </div>
               </div>

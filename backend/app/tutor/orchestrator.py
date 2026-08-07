@@ -7,6 +7,7 @@ import logging
 from datetime import datetime
 from typing import Any, AsyncIterator, Optional
 
+from app.config import using_openrouter
 from app.verification.text_utils import response_reveals_answer
 from app.tutor.model_gateway import ModelGateway, create_model_gateway
 from app.tutor.pedagogy import PedagogyPolicy
@@ -28,6 +29,11 @@ from app.verification.schemas import VerificationReport
 logger = logging.getLogger("tutor.orchestrator")
 
 
+def _gateway_model_name(gateway: ModelGateway) -> str:
+    inner = getattr(gateway, "inner", gateway)
+    return getattr(inner, "model_name", type(gateway).__name__)
+
+
 class TutorOrchestrator:
     def __init__(self, model_gateway: ModelGateway | None = None) -> None:
         self.router = IntentRouter()
@@ -45,8 +51,15 @@ class TutorOrchestrator:
     def classify(self, ctx: TutorContext) -> IntentClassification:
         return self.router.classify(ctx.student_message, has_question=bool(ctx.target_question))
 
-    async def handle_message(self, ctx: TutorContext, app_state: Any) -> AsyncIterator[dict]:
+    async def handle_message(
+        self,
+        ctx: TutorContext,
+        app_state: Any,
+        *,
+        model_gateway: "ModelGateway | None" = None,
+    ) -> AsyncIterator[dict]:
         """Yield WebSocket-compatible events with structured tutor metadata."""
+        active_model = model_gateway or self.model
         classification = self.classify(ctx)
         yield {
             "type": "status",
@@ -221,13 +234,19 @@ class TutorOrchestrator:
                 system_instruction += f"\n\n== VERIFIED CHECK RESULT ==\n{attempt_report.summary}\n"
 
         full_response = ""
-        model_name = type(self.model).__name__
+        model_name = _gateway_model_name(active_model)
         try:
-            async for token in self.model.generate_stream(system_instruction, contents):
+            async for token in active_model.generate_stream(system_instruction, contents):
                 full_response += token
                 yield {"type": "token", "text": token}
         except Exception as exc:
             logger.error("Model generation failed: %s", exc, exc_info=True)
+            if using_openrouter():
+                message = str(exc).strip() or "Tutor models are temporarily busy. Please retry shortly."
+                yield {"type": "error", "message": message}
+                yield {"type": "done"}
+                return
+
             from app.services.tutor_fallback import get_local_socratic_fallback
 
             full_response = get_local_socratic_fallback(

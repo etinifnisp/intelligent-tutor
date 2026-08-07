@@ -18,7 +18,10 @@ from app.config import (
     GRAPH_STORE_PATH,
     IMAGES_DIR,
     JWT_SECRET,
+    MODEL_NAME,
     MODEL_PROVIDER,
+    get_openrouter_api_key,
+    using_openrouter,
     USE_LOCAL_RETRIEVAL,
 )
 from app.db import init_database
@@ -105,10 +108,21 @@ def create_app() -> FastAPI:
         if not app.state.retrieval.load():
             logger_boot.warning("Retrieval service not loaded — run build_retrieval_index.")
 
-        app.state.orchestrator = TutorOrchestrator(model_gateway=create_model_gateway(MODEL_PROVIDER))
+        boot_provider = "openrouter" if using_openrouter() else MODEL_PROVIDER
+        app.state.orchestrator = TutorOrchestrator(
+            model_gateway=create_model_gateway(
+                provider=boot_provider,
+                api_key=get_openrouter_api_key() or None,
+                model_name=MODEL_NAME,
+            )
+        )
         app.state.verification = VerificationService()
         app.state.mastery = MasteryService(app.state.learner_store)
-        logger_boot.info("Tutor orchestrator ready (model_provider=%s).", MODEL_PROVIDER)
+        logger_boot.info(
+            "Tutor orchestrator ready (model_provider=%s, model=%s).",
+            boot_provider,
+            MODEL_NAME,
+        )
 
         logger_graph.info("Initialising Knowledge Graph Manager...")
         app.state.graph = KnowledgeGraphManager(

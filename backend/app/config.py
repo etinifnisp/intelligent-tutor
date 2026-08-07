@@ -1,6 +1,12 @@
 from pathlib import Path
 import os
 
+from dotenv import load_dotenv
+
+# Load backend/.env before reading any secrets or model settings.
+if not os.getenv("TESTING"):
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
 # Project root: intelligent-tutor/
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -30,11 +36,21 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM
 USE_LOCAL_RETRIEVAL = os.getenv("USE_LOCAL_RETRIEVAL", "true").lower() in {"1", "true", "yes"}
 RETRIEVAL_CACHE_SIZE = max(1, int(os.getenv("RETRIEVAL_CACHE_SIZE", "256")))
 
-MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "gemini")  # gemini | ollama | mock
+MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "openrouter")  # openrouter | gemini | ollama | mock
 MODEL_BASE_URL = os.getenv("MODEL_BASE_URL", "http://localhost:11434/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.5-flash")
+MODEL_NAME = os.getenv("MODEL_NAME", "google/gemini-3.5-flash-lite")
 MODEL_FALLBACK_MODE = os.getenv("MODEL_FALLBACK_MODE", "mock")
 MODEL_TIMEOUT_SECONDS = float(os.getenv("MODEL_TIMEOUT_SECONDS", "30"))
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "").strip()
+OPENROUTER_DEFAULT_MODEL = os.getenv("OPENROUTER_DEFAULT_MODEL", "google/gemini-3.5-flash-lite")
+
+
+def get_openrouter_api_key() -> str:
+    return os.getenv("OPENROUTER_API_KEY", OPENROUTER_API_KEY).strip()
+
+
+def using_openrouter() -> bool:
+    return bool(get_openrouter_api_key())
 MAX_MESSAGE_LENGTH = max(256, int(os.getenv("MAX_MESSAGE_LENGTH", "4000")))
 GUEST_RATE_LIMIT = max(1, int(os.getenv("GUEST_RATE_LIMIT", "20")))
 GUEST_RATE_WINDOW_SECONDS = max(60.0, float(os.getenv("GUEST_RATE_WINDOW_SECONDS", "3600")))

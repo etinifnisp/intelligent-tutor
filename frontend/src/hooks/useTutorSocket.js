@@ -1,16 +1,22 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createTutorSocket, closeWebSocket } from '../utils.jsx';
+import { getSelectedModelId } from '../modelSettings.js';
 
 const REQUEST_TIMEOUT_MS = 45000;
 
 export function useTutorSocket(userId) {
   const wsRef = useRef(null);
+  const pendingHandlerRef = useRef(null);
   const [connected, setConnected] = useState(false);
   const [sending, setSending] = useState(false);
   const activeRef = useRef(true);
 
   const connect = useCallback(() => {
     if (!activeRef.current) return;
+    const current = wsRef.current;
+    if (current && (current.readyState === WebSocket.OPEN || current.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
     const ws = createTutorSocket();
     wsRef.current = ws;
     ws.onopen = () => {
@@ -20,6 +26,7 @@ export function useTutorSocket(userId) {
     ws.onclose = () => {
       setConnected(false);
       setSending(false);
+      pendingHandlerRef.current = null;
       if (activeRef.current) setTimeout(connect, 3000);
     };
     ws.onerror = () => {
@@ -33,6 +40,10 @@ export function useTutorSocket(userId) {
     connect();
     return () => {
       activeRef.current = false;
+      if (pendingHandlerRef.current && wsRef.current) {
+        wsRef.current.removeEventListener('message', pendingHandlerRef.current);
+      }
+      pendingHandlerRef.current = null;
       closeWebSocket(wsRef.current);
     };
   }, [userId, connect]);
@@ -42,6 +53,11 @@ export function useTutorSocket(userId) {
       onEvent?.({ type: 'error', message: 'Not connected to tutor. Retrying…' });
       return false;
     }
+    if (pendingHandlerRef.current) {
+      wsRef.current.removeEventListener('message', pendingHandlerRef.current);
+      pendingHandlerRef.current = null;
+    }
+
     setSending(true);
     let settled = false;
 
@@ -50,8 +66,11 @@ export function useTutorSocket(userId) {
       settled = true;
       clearTimeout(timeoutId);
       setSending(false);
-      wsRef.current?.removeEventListener('message', handler);
-      onEvent?.(event);
+      if (pendingHandlerRef.current && wsRef.current) {
+        wsRef.current.removeEventListener('message', pendingHandlerRef.current);
+      }
+      pendingHandlerRef.current = null;
+      if (event) onEvent?.(event);
     };
 
     const handler = (e) => {
@@ -72,9 +91,13 @@ export function useTutorSocket(userId) {
       finish({ type: 'error', message: 'Tutor response timed out. Please retry.' });
     }, REQUEST_TIMEOUT_MS);
 
+    pendingHandlerRef.current = handler;
     wsRef.current.addEventListener('message', handler);
     try {
-      wsRef.current.send(JSON.stringify(payload));
+      wsRef.current.send(JSON.stringify({
+        ...payload,
+        openrouter_model: getSelectedModelId(),
+      }));
     } catch {
       finish({ type: 'error', message: 'Could not send your message. Please retry.' });
       return false;

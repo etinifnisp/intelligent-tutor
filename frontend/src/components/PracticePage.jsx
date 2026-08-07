@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
-  API, apiFetch, authFetch, renderMarkdown, confidenceValue, questionId,
+  API, apiFetch, authFetch, confidenceValue, questionId,
 } from '../utils.jsx';
 import { parseQuestionContent, SOLUTION_STEPS } from '../questionContent.js';
 import { isLearningStepDisabled } from '../learningSteps.js';
 import { useTutorSocket } from '../hooks/useTutorSocket.js';
 import QuestionDisplay from './QuestionDisplay.jsx';
+import ChatMessageContent from './ChatMessageContent.jsx';
 import LoadingState from './LoadingState.jsx';
 import ErrorState from './ErrorState.jsx';
 import { saveLastSession } from '../lastSession.js';
@@ -37,6 +38,9 @@ export default function PracticePage({ user }) {
   const [timedMode, setTimedMode] = useState(false);
   const [revealAnswer, setRevealAnswer] = useState(false);
   const [revealedStepCount, setRevealedStepCount] = useState(0);
+  const [similarQuestions, setSimilarQuestions] = useState([]);
+  const [similarLoading, setSimilarLoading] = useState(false);
+  const [similarExpanded, setSimilarExpanded] = useState({});
   const startRef = useRef(null);
   const { connected, sending, send } = useTutorSocket(user?.id);
 
@@ -143,6 +147,21 @@ export default function PracticePage({ user }) {
   }, [mode, subject, chapter, difficulty]);
 
   useEffect(() => { loadQuestion(); }, [loadQuestion]);
+
+  // Fetch similar PYQs once the answer is revealed
+  useEffect(() => {
+    if (!revealAnswer || !question) return;
+    const qid = questionId(question);
+    if (!qid) return;
+    setSimilarQuestions([]);
+    setSimilarExpanded({});
+    setSimilarLoading(true);
+    authFetch(`/questions/${encodeURIComponent(qid)}/similar?top_k=3`)
+      .then(r => r.json())
+      .then(d => setSimilarQuestions(d.results || []))
+      .catch(() => setSimilarQuestions([]))
+      .finally(() => setSimilarLoading(false));
+  }, [revealAnswer, question]);
 
   function handleTutorEvent(data) {
     if (data.type === 'token') {
@@ -330,7 +349,9 @@ export default function PracticePage({ user }) {
                   </div>
                   {feedback?.mastery && <div className="mastery-update-pill">Mastery updated</div>}
                   {tutorReply && (
-                    <div className="tutor-feedback-text" dangerouslySetInnerHTML={renderMarkdown(tutorReply)} />
+                    <div className="tutor-feedback-text">
+                      <ChatMessageContent text={tutorReply} />
+                    </div>
                   )}
                 </div>
               )}
@@ -339,6 +360,85 @@ export default function PracticePage({ user }) {
                 <p className="learning-help-note">Start with Concept for a small nudge. The correct answer stays hidden until you submit or reach the full solution.</p>
               )}
             </section>
+
+            {revealAnswer && (
+              <section className="similar-pyqs-section" aria-labelledby="similar-pyqs-title">
+                <div className="similar-pyqs-header">
+                  <div className="similar-pyqs-icon">📚</div>
+                  <div>
+                    <span className="similar-pyqs-kicker">Reinforce your understanding</span>
+                    <h2 id="similar-pyqs-title">Similar PYQs from Previous Years</h2>
+                    <p>Practice these related questions from past JEE papers to solidify the concept.</p>
+                  </div>
+                </div>
+
+                {similarLoading && (
+                  <div className="similar-pyqs-loading">
+                    <span className="spinner" />
+                    Finding similar previous-year questions…
+                  </div>
+                )}
+
+                {!similarLoading && similarQuestions.length === 0 && (
+                  <p className="similar-pyqs-empty">No similar questions found in the index for this topic.</p>
+                )}
+
+                {!similarLoading && similarQuestions.length > 0 && (
+                  <div className="similar-pyqs-list">
+                    {similarQuestions.map((sq, i) => {
+                      const isOpen = !!similarExpanded[i];
+                      const diffCls = sq.difficulty === 'Easy' ? 'badge-easy' : sq.difficulty === 'Hard' ? 'badge-hard' : 'badge-medium';
+                      return (
+                        <div key={sq.question_id || i} className={`similar-pyq-card ${isOpen ? 'open' : ''}`}>
+                          <button
+                            className="similar-pyq-header"
+                            onClick={() => setSimilarExpanded(prev => ({ ...prev, [i]: !isOpen }))}
+                            aria-expanded={isOpen}
+                          >
+                            <div className="similar-pyq-meta">
+                              {sq.year && <span className="similar-pyq-year">{sq.year}</span>}
+                              {sq.exam_type && <span className="similar-pyq-exam">{sq.exam_type}</span>}
+                              {sq.topic && <span className="similar-pyq-topic">{sq.topic}</span>}
+                              {sq.difficulty && <span className={`badge ${diffCls}`}>{sq.difficulty}</span>}
+                            </div>
+                            <div className="similar-pyq-stem">
+                              {(sq.stem_text || '').slice(0, 180)}{sq.stem_text?.length > 180 ? '…' : ''}
+                            </div>
+                            <span className="similar-pyq-chevron" aria-hidden="true">{isOpen ? '▲' : '▼'}</span>
+                          </button>
+
+                          {isOpen && (
+                            <div className="similar-pyq-body">
+                              <p className="similar-pyq-full-stem">{sq.stem_text}</p>
+                              {sq.options?.length === 4 && (
+                                <div className="similar-pyq-options">
+                                  {sq.options.map(opt => (
+                                    <div
+                                      key={opt.label}
+                                      className={`similar-pyq-option ${
+                                        sq.correct_answer === opt.label ? 'correct' : ''
+                                      }`}
+                                    >
+                                      <span className="similar-pyq-option-label">{opt.label}</span>
+                                      <span>{opt.text}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {sq.correct_answer && (
+                                <p className="similar-pyq-answer">
+                                  ✅ Correct answer: <strong>{sq.correct_answer}</strong>
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            )}
           </div>
 
           <div className="practice-panel card">
@@ -366,14 +466,14 @@ export default function PracticePage({ user }) {
                 </div>
               )}
               {mcqOptions.length !== 4 && (
-              <textarea
-                className="answer-input"
-                rows={3}
-                placeholder="Type your answer or working…"
-                value={answer}
-                onChange={e => setAnswer(e.target.value)}
-                disabled={sending}
-              />
+                <textarea
+                  className="answer-input"
+                  rows={3}
+                  placeholder="Type your answer or working…"
+                  value={answer}
+                  onChange={e => setAnswer(e.target.value)}
+                  disabled={sending}
+                />
               )}
               <button
                 className="btn btn-primary submit-attempt-btn"

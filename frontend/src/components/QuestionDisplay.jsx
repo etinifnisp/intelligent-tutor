@@ -1,5 +1,6 @@
 import { renderMarkdown } from '../utils.jsx';
-import { parseQuestionContent, getQuestionImages } from '../questionContent.js';
+import { parseQuestionContent, getQuestionImages, prepareMathText } from '../questionContent.js';
+import MathText from '../MathText.jsx';
 
 export default function QuestionDisplay({
   question,
@@ -49,10 +50,9 @@ export default function QuestionDisplay({
       </div>
 
       {parsed.stem ? (
-        <div
-          className="qd-text"
-          dangerouslySetInnerHTML={renderMarkdown(parsed.stem)}
-        />
+        <div className="qd-text">
+          <MathText text={prepareMathText(parsed.stem)} />
+        </div>
       ) : (
         <p className="qd-empty">Question text unavailable for this item.</p>
       )}
@@ -87,10 +87,9 @@ export default function QuestionDisplay({
                 onClick={onSelectOption ? () => onSelectOption(opt.label) : undefined}
               >
                 <span className="qd-option-label">{opt.label}</span>
-                <span
-                  className="qd-option-text"
-                  dangerouslySetInnerHTML={renderMarkdown(opt.text)}
-                />
+                <span className="qd-option-text">
+                  <MathText text={prepareMathText(opt.text)} />
+                </span>
                 {isCorrect && <span className="qd-option-result">Correct</span>}
               </OptionTag>
             );
@@ -104,10 +103,9 @@ export default function QuestionDisplay({
           <ol>
             {parsed.solutionSteps.map((step, i) => (
               revealSolutionSteps.includes(i) && (
-                <li
-                  key={i}
-                  dangerouslySetInnerHTML={renderMarkdown(step)}
-                />
+                <li key={i}>
+                  <MathText text={prepareMathText(step)} />
+                </li>
               )
             ))}
           </ol>
@@ -117,7 +115,7 @@ export default function QuestionDisplay({
       {showAnswer && (
         <div className="qd-answer-reveal">
           <strong>Correct answer:</strong>{' '}
-          <span dangerouslySetInnerHTML={renderMarkdown(String(parsed.correctAnswer))} />
+          <MathText text={String(parsed.correctAnswer)} />
         </div>
       )}
     </div>

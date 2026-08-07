@@ -2,7 +2,7 @@ def get_local_socratic_fallback(
     target_q, student_message, active_concept_node, active_chapter, active_subject
 ):
     msg_lower = student_message.lower()
-    header = "⚠️ [System Notice: Gemini API rate limit reached. Running local Socratic backup mode]\n\n"
+    header = "⚠️ Tutor is temporarily unavailable. Here is a short offline study prompt instead.\n\n"
 
     if msg_lower.startswith("please help me solve this question") and target_q:
         q_text = target_q.get("raw_text", "")

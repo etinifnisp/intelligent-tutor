@@ -8,6 +8,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 # Force mock model and local retrieval before app import
+os.environ["TESTING"] = "1"
+os.environ.setdefault("OPENROUTER_API_KEY", "")
 os.environ.setdefault("MODEL_PROVIDER", "mock")
 os.environ.setdefault("USE_LOCAL_RETRIEVAL", "true")
 

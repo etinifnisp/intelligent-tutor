@@ -71,6 +71,15 @@ def test_learning_progress(client, auth_headers):
     assert "total_attempts" in res.json()
 
 
+def test_list_tutor_models(client):
+    res = client.get("/tutor/models")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["default_model"] == "google/gemini-3.5-flash-lite"
+    assert len(body["models"]) == 5
+    assert all(model["id"] for model in body["models"])
+
+
 def test_questions_endpoint(client):
     res = client.get("/questions?limit=5")
     assert res.status_code == 200

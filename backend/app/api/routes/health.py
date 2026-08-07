@@ -65,7 +65,7 @@ async def health_ready(request: Request):
     checks["retrieval_index"] = FAISS_INDEX_PATH.exists() and RETRIEVAL_MANIFEST_PATH.exists()
     ok = ok and checks["retrieval_ready"]
 
-    checks["model_provider"] = os.getenv("MODEL_PROVIDER", "gemini")
+    checks["model_provider"] = "openrouter" if os.getenv("OPENROUTER_API_KEY") else os.getenv("MODEL_PROVIDER", "gemini")
 
     status_code = 200 if ok else 503
     return JSONResponse(
@@ -91,5 +91,5 @@ async def health_metrics(request: Request):
         "memory_mb": memory_mb,
         "corpus_count": len(get_questions_ram()),
         "retrieval_ready": bool(retrieval and getattr(retrieval, "ready", False)),
-        "model_provider": os.getenv("MODEL_PROVIDER", "gemini"),
+        "model_provider": "openrouter" if os.getenv("OPENROUTER_API_KEY") else os.getenv("MODEL_PROVIDER", "gemini"),
     }

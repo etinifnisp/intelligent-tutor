@@ -3,6 +3,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 from app.config import MAX_MESSAGE_LENGTH
+from app.services.model_catalog import is_allowed_openrouter_model, resolve_openrouter_model
 
 
 class ChatPayload(BaseModel):
@@ -11,6 +12,9 @@ class ChatPayload(BaseModel):
     question_id: Optional[str] = Field(default=None, max_length=128)
     chapter_context: Optional[str] = Field(default=None, max_length=256)
     chat_history: List[dict] = Field(default_factory=list, max_length=20)
+    confidence_before: Optional[float] = None
+    response_time_ms: Optional[int] = None
+    openrouter_model: Optional[str] = Field(default=None, max_length=128)
 
     @field_validator("chat_history")
     @classmethod
@@ -25,8 +29,21 @@ class ChatPayload(BaseModel):
             if len(content) > MAX_MESSAGE_LENGTH:
                 raise ValueError("Chat history entry too long")
         return value
-    confidence_before: Optional[float] = None
-    response_time_ms: Optional[int] = None
+
+    @field_validator("openrouter_model")
+    @classmethod
+    def validate_openrouter_model(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            return None
+        if not is_allowed_openrouter_model(cleaned):
+            raise ValueError("Model not allowed")
+        return cleaned
+
+    def resolved_openrouter_model(self) -> str:
+        return resolve_openrouter_model(self.openrouter_model)
 
 
 class RegisterRequest(BaseModel):

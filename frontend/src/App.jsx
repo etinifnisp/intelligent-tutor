@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { MathJaxContext } from 'better-react-mathjax';
 import { apiFetch, startGuestSession } from './utils.jsx';
 import HeroPage from './components/HeroPage.jsx';
 import Sidebar from './components/Sidebar.jsx';
@@ -9,6 +10,28 @@ import MistakesPage from './components/MistakesPage.jsx';
 import ProgressPage from './components/ProgressPage.jsx';
 import GraphPage from './components/GraphPage.jsx';
 import AdminPage from './components/AdminPage.jsx';
+import SettingsModal from './components/SettingsModal.jsx';
+
+const MATHJAX_CONFIG = {
+  loader: { load: ['input/tex', 'output/chtml'] },
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true,
+    processEnvironments: true,
+    packages: { '[+]': ['ams', 'noerrors', 'noundefined'] },
+  },
+  chtml: {
+    scale: 1,
+    matchFontHeight: true,
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+    renderActions: {
+      addMenu: [],
+    },
+  },
+};
 
 export default function App() {
   const [view, setView] = useState('landing');
@@ -18,6 +41,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authError, setAuthError] = useState('');
   const [sessionState, setSessionState] = useState('loading');
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -67,13 +91,15 @@ export default function App() {
 
   if (view === 'landing') {
     return (
-      <HeroPage
-        onEnter={() => { setView('dashboard'); window.scrollTo(0, 0); }}
-        sessionReady={sessionState === 'ready'}
-        sessionLoading={sessionState === 'loading'}
-        sessionError={authError}
-        onRetrySession={retryGuestSession}
-      />
+      <MathJaxContext config={MATHJAX_CONFIG}>
+        <HeroPage
+          onEnter={() => { setView('dashboard'); window.scrollTo(0, 0); }}
+          sessionReady={sessionState === 'ready'}
+          sessionLoading={sessionState === 'loading'}
+          sessionError={authError}
+          onRetrySession={retryGuestSession}
+        />
+      </MathJaxContext>
     );
   }
 
@@ -93,27 +119,36 @@ export default function App() {
   }
 
   return (
-    <div id="app-shell">
-      <button
-        className="mobile-nav-toggle"
-        onClick={() => setMobileNav(v => !v)}
-        aria-label="Toggle navigation"
-      >
-        <svg viewBox="0 0 24 24" width="20" height="20"><line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" strokeWidth="2"/><line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" strokeWidth="2"/><line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" strokeWidth="2"/></svg>
-      </button>
-      <div className={`sidebar-wrap ${mobileNav ? 'open' : ''}`}>
-        <Sidebar page={page} setPage={(p) => { setPage(p); setMobileNav(false); }} online={online} user={user}/>
+    <MathJaxContext config={MATHJAX_CONFIG}>
+      <div id="app-shell">
+        <button
+          className="mobile-nav-toggle"
+          onClick={() => setMobileNav(v => !v)}
+          aria-label="Toggle navigation"
+        >
+          <svg viewBox="0 0 24 24" width="20" height="20"><line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" strokeWidth="2"/><line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" strokeWidth="2"/><line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" strokeWidth="2"/></svg>
+        </button>
+        <div className={`sidebar-wrap ${mobileNav ? 'open' : ''}`}>
+          <Sidebar
+            page={page}
+            setPage={(p) => { setPage(p); setMobileNav(false); }}
+            online={online}
+            user={user}
+            onOpenSettings={() => setSettingsOpen(true)}
+          />
+        </div>
+        {mobileNav && <div className="sidebar-overlay" onClick={() => setMobileNav(false)} />}
+        <div id="main">
+          {page === 'today'    && <TodayPage user={user} setPage={setPage}/>}
+          {page === 'practice' && <PracticePage user={user}/>}
+          {page === 'tutor'    && <ChatPage user={user}/>}
+          {page === 'mistakes' && <MistakesPage user={user} setPage={setPage}/>}
+          {page === 'progress' && <ProgressPage user={user}/>}
+          {page === 'conceptmap' && <GraphPage user={user}/>}
+          {page === 'admin'    && <AdminPage user={user}/>}
+        </div>
       </div>
-      {mobileNav && <div className="sidebar-overlay" onClick={() => setMobileNav(false)} />}
-      <div id="main">
-        {page === 'today'    && <TodayPage user={user} setPage={setPage}/>}
-        {page === 'practice' && <PracticePage user={user}/>}
-        {page === 'tutor'    && <ChatPage user={user}/>}
-        {page === 'mistakes' && <MistakesPage user={user} setPage={setPage}/>}
-        {page === 'progress' && <ProgressPage user={user}/>}
-        {page === 'conceptmap' && <GraphPage user={user}/>}
-        {page === 'admin'    && <AdminPage user={user}/>}
-      </div>
-    </div>
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+    </MathJaxContext>
   );
 }
